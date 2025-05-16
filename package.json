@@ -6,18 +6,26 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "update-prices": "bun --no-warnings ts-node-esm scripts/update-prices.ts"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.3",
+    "@supabase/supabase-js": "^2.49.4",
+    "chart.js": "^4.4.9",
+    "date-fns": "^4.1.0",
+    "next": "15.3.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next": "15.3.2"
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "@eslint/eslintrc": "^3"
