@@ -20,17 +20,6 @@ module.exports = {
         'candy-red-light': '#fc3c44',
         'candy-red': '#f94c57',
         'candy-red-dark': '#c33c50',
-        // Override blue colors with candy red
-        'blue-50': '#fef2f2',
-        'blue-100': '#fee2e2',
-        'blue-200': '#fecaca',
-        'blue-300': '#fca5a5',
-        'blue-400': '#f87171',
-        'blue-500': '#f94c57', // candy-red
-        'blue-600': '#c33c50', // candy-red-dark
-        'blue-700': '#b91c1c',
-        'blue-800': '#991b1b',
-        'blue-900': '#7f1d1d',
         // Modal text (ensure good contrast)
         'modal-text': '#1F2937',
         'modal-text-muted': '#4B5563',
