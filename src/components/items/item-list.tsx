@@ -61,7 +61,7 @@ export function ItemList() {
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Def Index</th>
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Def Name</th>
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Paint</th>
-            <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Wear (Float Range)</th>
+            <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Wear</th>
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Category</th>
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Market Hash</th>
           </tr>
@@ -95,16 +95,9 @@ export function ItemList() {
               </td>
               <td className="py-3 px-4">
                 {item.min_float !== null || item.max_float !== null ? (
-                  <div className="flex flex-col">
-                    <div className="mb-1">
-                      <span className={getSingleWearCategory(item.min_float, item.max_float).colorClass}>
-                        {getSingleWearCategory(item.min_float, item.max_float).label}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-600">
-                      {item.min_float !== null ? item.min_float.toFixed(4) : '?'} - {item.max_float !== null ? item.max_float.toFixed(4) : '?'}
-                    </span>
-                  </div>
+                  <span className={getSingleWearCategory(item.min_float, item.max_float).colorClass}>
+                    {getSingleWearCategory(item.min_float, item.max_float).label}
+                  </span>
                 ) : (
                   <span className="text-gray-400">-</span>
                 )}
