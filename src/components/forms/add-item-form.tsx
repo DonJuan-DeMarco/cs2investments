@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState, useEffect } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
@@ -17,6 +17,17 @@ const itemSchema = z.object({
 
 type ItemFormValues = z.infer<typeof itemSchema>
 
+// Function to get wear category name based on float value
+function getWearName(floatValue: number | null): string {
+  if (floatValue === null) return '';
+  
+  if (floatValue < 0.07) return 'Factory New';
+  if (floatValue < 0.15) return 'Minimal Wear';
+  if (floatValue < 0.38) return 'Field-Tested';
+  if (floatValue < 0.45) return 'Well-Worn';
+  return 'Battle-Scarred';
+}
+
 export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -28,6 +39,8 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
     formState: { errors },
   } = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
@@ -35,6 +48,33 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       category: 0,
     },
   })
+
+  // Watch the required fields for auto-generating market hash name
+  const defName = useWatch({ control, name: 'def_name' });
+  const paintName = useWatch({ control, name: 'paint_name' });
+  const minFloat = useWatch({ control, name: 'min_float' });
+  
+  // Generate market hash name whenever dependent fields change
+  useEffect(() => {
+    if (!defName) return;
+    
+    let hashName = defName;
+    
+    // Add paint name if available
+    if (paintName) {
+      hashName += ` | ${paintName}`;
+    }
+    
+    // Add wear condition if min_float is specified
+    if (minFloat !== null && minFloat !== undefined) {
+      const wearName = getWearName(minFloat);
+      if (wearName) {
+        hashName += ` (${wearName})`;
+      }
+    }
+    
+    setValue('market_hash_name', hashName);
+  }, [defName, paintName, minFloat, setValue]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -72,6 +112,24 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
           .getPublicUrl(fileName)
           
         imageUrl = publicUrl
+      }
+      
+      // Generate market hash name if not already set
+      if (!data.market_hash_name && data.def_name) {
+        let hashName = data.def_name;
+        
+        if (data.paint_name) {
+          hashName += ` | ${data.paint_name}`;
+        }
+        
+        if (data.min_float !== null) {
+          const wearName = getWearName(data.min_float);
+          if (wearName) {
+            hashName += ` (${wearName})`;
+          }
+        }
+        
+        data.market_hash_name = hashName;
       }
       
       // Insert the item data
@@ -219,11 +277,12 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
       
       <div>
-        <label className="block text-sm font-medium mb-1">Market Hash Name</label>
+        <label className="block text-sm font-medium mb-1">Market Hash Name (Auto-generated)</label>
         <input
           type="text"
           {...register('market_hash_name')}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded bg-gray-50"
+          readOnly
         />
       </div>
       
