@@ -1,108 +1,44 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import InvestmentTable from '@/components/InvestmentTable';
-import PriceChart from '@/components/PriceChart';
-import AddItemModal from '@/components/AddItemModal';
-import { InvestmentItem } from '@/lib/supabase';
+import { useState } from 'react'
+import { Modal } from '@/components/ui/modal'
+import { AddItemForm } from '@/components/forms/add-item-form'
+import { ItemList } from '@/components/items/item-list'
 
 export default function Home() {
-  const [investments, setInvestments] = useState<InvestmentItem[]>([]);
-  const [selectedItem, setSelectedItem] = useState<InvestmentItem | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  useEffect(() => {
-    fetchInvestments();
-  }, []);
-
-  const fetchInvestments = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/investments');
-      const data = await response.json();
-      setInvestments(data);
-    } catch (error) {
-      console.error('Error fetching investments:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddItem = async (newItem: any) => {
-    try {
-      const response = await fetch('/api/investments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newItem),
-      });
-
-      if (response.ok) {
-        const addedItem = await response.json();
-        setInvestments([addedItem, ...investments]);
-        setIsModalOpen(false);
-      } else {
-        console.error('Failed to add item');
-      }
-    } catch (error) {
-      console.error('Error adding item:', error);
-    }
-  };
+  const handleAddSuccess = () => {
+    setIsModalOpen(false)
+    setRefreshKey(prev => prev + 1) // Force refresh of ItemList
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-900">CS2 Investment Tracker</h1>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="-ml-1 mr-2 h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Add Investment
-            </button>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="text-gray-500">Loading investments...</div>
-          </div>
-        ) : (
-          <>
-            <div className="mb-8">
-              <PriceChart investments={investments} selectedItem={selectedItem} />
-            </div>
-            
-            <div>
-              <InvestmentTable
-                investments={investments}
-                onSelectItem={setSelectedItem}
-              />
-            </div>
-          </>
-        )}
+    <main className="flex min-h-screen flex-col px-6 py-8 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">CS2 Items</h1>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        >
+          Add New Item
+        </button>
       </div>
 
-      <AddItemModal
-        isOpen={isModalOpen}
+      {/* Item List - Using key to force refresh when new items are added */}
+      <div key={refreshKey}>
+        <ItemList />
+      </div>
+
+      {/* Add Item Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        onAddItem={handleAddItem}
-      />
+        title="Add New CS2 Item"
+      >
+        <AddItemForm onSuccess={handleAddSuccess} />
+      </Modal>
     </main>
-  );
+  )
 }
