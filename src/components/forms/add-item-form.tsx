@@ -11,7 +11,7 @@ const itemSchema = z.object({
   paint_name: z.string().nullable(),
   max_float: z.coerce.number().min(0).max(1).nullable(),
   min_float: z.coerce.number().min(0).max(1).nullable(),
-  category: z.coerce.number().int().min(0).max(3).default(0),
+  category: z.coerce.number().int().min(0).max(3),
   market_hash_name: z.string().nullable(),
 })
 
@@ -97,7 +97,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Definition Index*</label>
@@ -232,7 +232,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded"
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           disabled={isLoading}
         >
           {isLoading ? 'Adding...' : 'Add Item'}
