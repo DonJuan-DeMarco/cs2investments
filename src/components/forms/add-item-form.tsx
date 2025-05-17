@@ -147,6 +147,32 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
       </div>
       
+      <div className="mb-3">
+        <div className="text-sm mb-2">Wear Categories:</div>
+        <div className="grid grid-cols-5 gap-2 mb-3 text-xs">
+          <div className="text-center p-1 bg-green-100 rounded">
+            <span className="text-green-500 font-medium">FN</span>
+            <div>0.00-0.07</div>
+          </div>
+          <div className="text-center p-1 bg-green-50 rounded">
+            <span className="text-green-400 font-medium">MW</span>
+            <div>0.07-0.15</div>
+          </div>
+          <div className="text-center p-1 bg-yellow-50 rounded">
+            <span className="text-yellow-500 font-medium">FT</span>
+            <div>0.15-0.38</div>
+          </div>
+          <div className="text-center p-1 bg-orange-50 rounded">
+            <span className="text-orange-500 font-medium">WW</span>
+            <div>0.38-0.45</div>
+          </div>
+          <div className="text-center p-1 bg-red-50 rounded">
+            <span className="text-red-500 font-medium">BS</span>
+            <div>0.45-1.00</div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Min Float</label>

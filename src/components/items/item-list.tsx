@@ -61,7 +61,7 @@ export function ItemList() {
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Def Index</th>
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Def Name</th>
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Paint</th>
-            <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Float Range</th>
+            <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Wear (Float Range)</th>
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Category</th>
             <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Market Hash</th>
           </tr>
@@ -95,9 +95,22 @@ export function ItemList() {
               </td>
               <td className="py-3 px-4">
                 {item.min_float !== null || item.max_float !== null ? (
-                  <span>
-                    {item.min_float !== null ? item.min_float.toFixed(4) : '?'} - {item.max_float !== null ? item.max_float.toFixed(4) : '?'}
-                  </span>
+                  <div className="flex flex-col">
+                    <div className="flex space-x-2 mb-1">
+                      {item.min_float !== null && (
+                        <span className={getWearCategory(item.min_float).colorClass}>{getWearCategory(item.min_float).label}</span>
+                      )}
+                      {item.min_float !== null && item.max_float !== null && (
+                        <span>-</span>
+                      )}
+                      {item.max_float !== null && (
+                        <span className={getWearCategory(item.max_float).colorClass}>{getWearCategory(item.max_float).label}</span>
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      {item.min_float !== null ? item.min_float.toFixed(4) : '?'} - {item.max_float !== null ? item.max_float.toFixed(4) : '?'}
+                    </span>
+                  </div>
                 ) : (
                   <span className="text-gray-400">-</span>
                 )}
@@ -124,4 +137,15 @@ function getCategoryLabel(category: number): string {
     case 3: return "Other"
     default: return "Unknown"
   }
+}
+
+// Function to get wear category based on float value
+function getWearCategory(floatValue: number | null): { label: string; colorClass: string } {
+  if (floatValue === null) return { label: '?', colorClass: 'text-gray-500' };
+  
+  if (floatValue < 0.07) return { label: 'FN', colorClass: 'text-green-500 font-medium' };
+  if (floatValue < 0.15) return { label: 'MW', colorClass: 'text-green-400 font-medium' };
+  if (floatValue < 0.38) return { label: 'FT', colorClass: 'text-yellow-500 font-medium' };
+  if (floatValue < 0.45) return { label: 'WW', colorClass: 'text-orange-500 font-medium' };
+  return { label: 'BS', colorClass: 'text-red-500 font-medium' };
 } 
