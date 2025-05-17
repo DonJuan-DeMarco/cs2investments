@@ -96,16 +96,10 @@ export function ItemList() {
               <td className="py-3 px-4">
                 {item.min_float !== null || item.max_float !== null ? (
                   <div className="flex flex-col">
-                    <div className="flex space-x-2 mb-1">
-                      {item.min_float !== null && (
-                        <span className={getWearCategory(item.min_float).colorClass}>{getWearCategory(item.min_float).label}</span>
-                      )}
-                      {item.min_float !== null && item.max_float !== null && (
-                        <span>-</span>
-                      )}
-                      {item.max_float !== null && (
-                        <span className={getWearCategory(item.max_float).colorClass}>{getWearCategory(item.max_float).label}</span>
-                      )}
+                    <div className="mb-1">
+                      <span className={getSingleWearCategory(item.min_float, item.max_float).colorClass}>
+                        {getSingleWearCategory(item.min_float, item.max_float).label}
+                      </span>
                     </div>
                     <span className="text-sm text-gray-600">
                       {item.min_float !== null ? item.min_float.toFixed(4) : '?'} - {item.max_float !== null ? item.max_float.toFixed(4) : '?'}
@@ -148,4 +142,18 @@ function getWearCategory(floatValue: number | null): { label: string; colorClass
   if (floatValue < 0.38) return { label: 'FT', colorClass: 'text-yellow-500 font-medium' };
   if (floatValue < 0.45) return { label: 'WW', colorClass: 'text-orange-500 font-medium' };
   return { label: 'BS', colorClass: 'text-red-500 font-medium' };
+}
+
+// Function to get a single wear category for a float range
+function getSingleWearCategory(minFloat: number | null, maxFloat: number | null): { label: string; colorClass: string } {
+  // If we have a min float, use that to determine the category
+  if (minFloat !== null) {
+    return getWearCategory(minFloat);
+  }
+  // If only max float is available, use that
+  else if (maxFloat !== null) {
+    return getWearCategory(maxFloat);
+  }
+  // Fallback if neither is available
+  return { label: '?', colorClass: 'text-gray-500' };
 } 
