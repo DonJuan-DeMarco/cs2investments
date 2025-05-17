@@ -126,7 +126,7 @@ export function ItemList() {
     if (price === null || price === undefined) return <span className="text-gray-400">No price data</span>;
     
     // Format price with currency symbol and 2 decimal places
-    return <span className="font-medium text-green-600">${price.toFixed(2)}</span>;
+    return <span className="font-medium text-green-600">${(price/100).toFixed(2)}</span>;
   };
 
   return (
