@@ -60,18 +60,17 @@ export function ItemList() {
         try {
           // Only query CSFloat if we have the necessary data
           if (item.def_index && (item.min_float !== null || item.max_float !== null)) {
-            const itemListings = await fetchListings({
+            const firstPrice = await getAveragePrice({
               def_index: item.def_index,
               paint_index: item.paint_index || undefined,
               min_float: item.min_float || undefined,
               max_float: item.max_float || undefined,
               category: item.category
             });
-            console.log(itemListings);
-            console.log('here');
+            
             return {
               ...item,
-              price: itemListings.data[0].price,
+              price: firstPrice,
               isPriceLoading: false,
               priceError: false
             };

@@ -65,12 +65,12 @@ export async function getAveragePrice(params: CSFloatListingParams): Promise<num
     // Set a reasonable limit (we only need the first one, but request a few in case some fail)
     const listings = await fetchListings({ ...params, limit: 5 });
     
-    if (listings.length === 0) {
+    if (listings.data.length === 0) {
       return null;
     }
     
     // Just return the price of the first listing (which should be the lowest price)
-    return listings[0].price;
+    return listings.data[0].price;
   } catch (error) {
     console.error('Error getting price:', error);
     return null;
