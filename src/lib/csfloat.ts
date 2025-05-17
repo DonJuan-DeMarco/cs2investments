@@ -29,10 +29,10 @@ const CSFLOAT_API_KEY = process.env.NEXT_PUBLIC_CSFLOAT_API_KEY;
 /**
  * Fetches listings from CSFloat API based on item parameters
  */
-export async function fetchListings(params: CSFloatListingParams): Promise<CSFloatListing[]> {
+export async function fetchListings(params: CSFloatListingParams): Promise<{cursor: string, data: CSFloatListing[]}> {
   try {
     // Construct URL with query parameters
-    const url = new URL('https://csfloat.com/api/v1/listings');
+    const url = new URL('/api/csfloat', window.location.origin);
     
     // Add parameters to URL
     Object.entries(params).forEach(([key, value]) => {
@@ -41,24 +41,14 @@ export async function fetchListings(params: CSFloatListingParams): Promise<CSFlo
       }
     });
     
-    // Set up request headers with API key
-    const headers: HeadersInit = {};
-    
-    if (CSFLOAT_API_KEY) {
-      headers['Authorization'] = CSFLOAT_API_KEY;
-    } else {
-      console.warn('CSFLOAT_API_KEY is not set. API requests may be rate limited or rejected.');
-    }
-    
-    const response = await fetch(url.toString(), {
-      headers
-    });
+    const response = await fetch(url.toString());
     
     if (!response.ok) {
-      throw new Error(`CSFloat API returned ${response.status}: ${response.statusText}`);
+      throw new Error(`API returned ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
+    console.log(data);
     return data;
   } catch (error) {
     console.error('Error fetching CSFloat listings:', error);
@@ -67,22 +57,22 @@ export async function fetchListings(params: CSFloatListingParams): Promise<CSFlo
 }
 
 /**
- * Gets the average price for an item with the specified parameters
+ * Gets the price for an item with the specified parameters
+ * Returns the price of the first (lowest price) listing
  */
 export async function getAveragePrice(params: CSFloatListingParams): Promise<number | null> {
   try {
-    // Set a reasonable limit to get a good average
+    // Set a reasonable limit (we only need the first one, but request a few in case some fail)
     const listings = await fetchListings({ ...params, limit: 5 });
     
     if (listings.length === 0) {
       return null;
     }
     
-    // Calculate average price
-    const sum = listings.reduce((total, listing) => total + listing.price, 0);
-    return sum / listings.length;
+    // Just return the price of the first listing (which should be the lowest price)
+    return listings[0].price;
   } catch (error) {
-    console.error('Error getting average price:', error);
+    console.error('Error getting price:', error);
     return null;
   }
 } 

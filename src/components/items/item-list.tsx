@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/supabase'
-import { getAveragePrice } from '@/lib/csfloat'
+import { fetchListings, getAveragePrice } from '@/lib/csfloat'
 
 type CSItem = Database['public']['Tables']['cs_items']['Row']
 
@@ -60,17 +60,18 @@ export function ItemList() {
         try {
           // Only query CSFloat if we have the necessary data
           if (item.def_index && (item.min_float !== null || item.max_float !== null)) {
-            const price = await getAveragePrice({
+            const itemListings = await fetchListings({
               def_index: item.def_index,
               paint_index: item.paint_index || undefined,
               min_float: item.min_float || undefined,
               max_float: item.max_float || undefined,
               category: item.category
             });
-            
+            console.log(itemListings);
+            console.log('here');
             return {
               ...item,
-              price,
+              price: itemListings.data[0].price,
               isPriceLoading: false,
               priceError: false
             };
