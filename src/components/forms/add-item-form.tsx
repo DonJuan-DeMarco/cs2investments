@@ -15,6 +15,15 @@ const itemSchema = z.object({
   market_hash_name: z.string().nullable(),
 })
 
+// Define wear categories with their float ranges
+const wearCategories = [
+  { label: 'FN', name: 'Factory New', minFloat: 0.00, maxFloat: 0.07, colorClass: 'bg-green-100 text-green-500 border-green-200' },
+  { label: 'MW', name: 'Minimal Wear', minFloat: 0.07, maxFloat: 0.15, colorClass: 'bg-green-50 text-green-400 border-green-100' },
+  { label: 'FT', name: 'Field-Tested', minFloat: 0.15, maxFloat: 0.38, colorClass: 'bg-yellow-50 text-yellow-500 border-yellow-200' },
+  { label: 'WW', name: 'Well-Worn', minFloat: 0.38, maxFloat: 0.45, colorClass: 'bg-orange-50 text-orange-500 border-orange-200' },
+  { label: 'BS', name: 'Battle-Scarred', minFloat: 0.45, maxFloat: 1.00, colorClass: 'bg-red-50 text-red-500 border-red-200' },
+];
+
 type ItemFormValues = z.infer<typeof itemSchema>
 
 // Function to get wear category name based on float value
@@ -32,6 +41,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedWear, setSelectedWear] = useState<number | null>(null)
   
   const supabase = createClient()
   
@@ -48,6 +58,14 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       category: 0,
     },
   })
+
+  // Handle wear category selection
+  const handleWearSelect = (index: number) => {
+    setSelectedWear(index);
+    const category = wearCategories[index];
+    setValue('min_float', category.minFloat);
+    setValue('max_float', category.maxFloat);
+  };
 
   // Watch the required fields for auto-generating market hash name
   const defName = useWatch({ control, name: 'def_name' });
@@ -144,6 +162,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       reset()
       setImageFile(null)
       setImagePreview(null)
+      setSelectedWear(null)
       onSuccess()
       
     } catch (error) {
@@ -153,6 +172,14 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       setIsLoading(false)
     }
   }
+  
+  // Reset function to clear form and state
+  const handleReset = () => {
+    reset();
+    setImageFile(null);
+    setImagePreview(null);
+    setSelectedWear(null);
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
@@ -206,61 +233,28 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
       
       <div className="mb-3">
-        <div className="text-sm mb-2">Wear Categories:</div>
-        <div className="grid grid-cols-5 gap-2 mb-3 text-xs">
-          <div className="text-center p-1 bg-green-100 rounded">
-            <span className="text-green-500 font-medium">FN</span>
-            <div>0.00-0.07</div>
-          </div>
-          <div className="text-center p-1 bg-green-50 rounded">
-            <span className="text-green-400 font-medium">MW</span>
-            <div>0.07-0.15</div>
-          </div>
-          <div className="text-center p-1 bg-yellow-50 rounded">
-            <span className="text-yellow-500 font-medium">FT</span>
-            <div>0.15-0.38</div>
-          </div>
-          <div className="text-center p-1 bg-orange-50 rounded">
-            <span className="text-orange-500 font-medium">WW</span>
-            <div>0.38-0.45</div>
-          </div>
-          <div className="text-center p-1 bg-red-50 rounded">
-            <span className="text-red-500 font-medium">BS</span>
-            <div>0.45-1.00</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Min Float</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            max="1"
-            {...register('min_float')}
-            className="w-full p-2 border rounded"
-          />
-          {errors.min_float && (
-            <p className="text-red-500 text-xs mt-1">{errors.min_float.message}</p>
-          )}
+        <label className="block text-sm font-medium mb-2">Wear Condition</label>
+        <div className="grid grid-cols-5 gap-2">
+          {wearCategories.map((category, index) => (
+            <button 
+              key={category.label} 
+              type="button"
+              onClick={() => handleWearSelect(index)}
+              className={`py-2 px-1 text-center border rounded transition-colors ${
+                selectedWear === index 
+                  ? `${category.colorClass} border-2` 
+                  : 'bg-white border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <div className="font-medium">{category.label}</div>
+              <div className="text-xs">{category.minFloat.toFixed(2)}-{category.maxFloat.toFixed(2)}</div>
+            </button>
+          ))}
         </div>
         
-        <div>
-          <label className="block text-sm font-medium mb-1">Max Float</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            max="1"
-            {...register('max_float')}
-            className="w-full p-2 border rounded"
-          />
-          {errors.max_float && (
-            <p className="text-red-500 text-xs mt-1">{errors.max_float.message}</p>
-          )}
-        </div>
+        {/* Hidden inputs for form values */}
+        <input type="hidden" {...register('min_float')} />
+        <input type="hidden" {...register('max_float')} />
       </div>
       
       <div>
@@ -305,11 +299,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       <div className="flex justify-end space-x-3 pt-4">
         <button
           type="button"
-          onClick={() => {
-            reset()
-            setImageFile(null)
-            setImagePreview(null)
-          }}
+          onClick={handleReset}
           className="px-4 py-2 border rounded"
           disabled={isLoading}
         >
