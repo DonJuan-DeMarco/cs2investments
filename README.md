@@ -7,6 +7,8 @@ A web application for tracking Counter Strike 2 items built with NextJS and Supa
 - List and track CS2 items with detailed information
 - Store images in Supabase storage
 - Add new items via a modal interface
+- Display current market prices from the CSFloat API
+- Wear condition visualization with color-coded labels
 
 ## Schema
 
@@ -42,6 +44,8 @@ bun install
 ```
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+# Optional: CSFloat API key for fetching item prices
+NEXT_PUBLIC_CSFLOAT_API_KEY=your-csfloat-api-key
 ```
 
 4. Set up Supabase:
@@ -149,3 +153,21 @@ supabase stop
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
 - [React Hook Form](https://react-hook-form.com/) - Forms with easy validation
 - [Zod](https://zod.dev/) - TypeScript-first schema validation
+
+## CSFloat API Integration
+
+This application integrates with the [CSFloat API](https://docs.csfloat.com/) to fetch current market prices for CS2 items. The integration:
+
+1. Fetches listing data based on item parameters (def_index, paint_index, float values)
+2. Calculates average prices from multiple listings
+3. Displays pricing information in the item table
+
+To use the CSFloat API features:
+
+1. Sign up at [CSFloat](https://csfloat.com/) and get an API key from your profile's developer tab
+2. Add your API key to the `.env.local` file:
+   ```
+   NEXT_PUBLIC_CSFLOAT_API_KEY=your-csfloat-api-key
+   ```
+
+Note: Without an API key, price data will not be available or may be rate-limited.
