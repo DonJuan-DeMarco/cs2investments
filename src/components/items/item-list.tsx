@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/supabase'
 import { fetchListings, getAveragePrice } from '@/lib/csfloat'
@@ -18,85 +18,116 @@ export function ItemList() {
   const [items, setItems] = useState<CSItemWithPrice[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [hasFetchedPrices, setHasFetchedPrices] = useState(false)
   
+  // Create Supabase client just once with useMemo or useCallback
+  const supabase = createClient()
+  
+  // Separate fetch items function so it can be reused
+  const fetchItems = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const { data, error } = await supabase.from('cs_items').select('*')
+      
+      if (error) throw error
+      
+      // Initialize items with price loading state
+      const itemsWithPriceState = data.map(item => ({
+        ...item,
+        price: null,
+        isPriceLoading: true,
+        priceError: false
+      }));
+      
+      setItems(itemsWithPriceState)
+      setHasFetchedPrices(false) // Reset price fetch flag
+    } catch (err) {
+      console.error("Error fetching items:", err)
+      setError('Failed to load items')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase])
+  
+  // Initial data fetch
   useEffect(() => {
-    async function fetchItems() {
-      try {
-        setIsLoading(true)
-        const supabase = createClient()
-        const { data, error } = await supabase.from('cs_items').select('*')
+    fetchItems()
+    // No dependencies since fetchItems has supabase in its dependency array
+  }, [fetchItems])
+  
+  // Fetch prices for items once they're loaded, but ONLY ONCE
+  useEffect(() => {
+    async function fetchPrices() {
+      if (!items || hasFetchedPrices) return;
+      
+      setHasFetchedPrices(true); // Mark that we've started fetching prices
+      
+      // Process items in batches to prevent too many simultaneous requests
+      const batchSize = 3;
+      const updatedItems = [...items];
+      
+      for (let i = 0; i < updatedItems.length; i += batchSize) {
+        const batch = updatedItems.slice(i, i + batchSize);
         
-        if (error) throw error
+        // Process the current batch in parallel
+        const batchResults = await Promise.all(
+          batch.map(async (item) => {
+            if (!item.isPriceLoading) return item; // Skip if already loaded
+            
+            try {
+              // Only query CSFloat if we have the necessary data
+              if (item.def_index && (item.min_float !== null || item.max_float !== null)) {
+                const firstPrice = await getAveragePrice({
+                  def_index: item.def_index,
+                  paint_index: item.paint_index || undefined,
+                  min_float: item.min_float || undefined,
+                  max_float: item.max_float || undefined,
+                  category: item.category
+                });
+                
+                return {
+                  ...item,
+                  price: firstPrice,
+                  isPriceLoading: false,
+                  priceError: false
+                };
+              }
+              
+              // If missing required data, mark as not loading but with no price
+              return {
+                ...item,
+                isPriceLoading: false
+              };
+            } catch (err) {
+              console.error(`Error fetching price for item ${item.id}:`, err);
+              return {
+                ...item,
+                isPriceLoading: false,
+                priceError: true
+              };
+            }
+          })
+        );
         
-        // Initialize items with price loading state
-        const itemsWithPriceState = data.map(item => ({
-          ...item,
-          price: null,
-          isPriceLoading: true,
-          priceError: false
-        }));
+        // Update the items array with the processed batch
+        batchResults.forEach((result, index) => {
+          updatedItems[i + index] = result;
+        });
         
-        setItems(itemsWithPriceState)
-      } catch (err) {
-        console.error("Error fetching items:", err)
-        setError('Failed to load items')
-      } finally {
-        setIsLoading(false)
+        // Update state after each batch to show progress
+        setItems([...updatedItems]);
+        
+        // Add a small delay between batches to avoid overwhelming the API
+        if (i + batchSize < updatedItems.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
     }
     
-    fetchItems()
-  }, [])
-  
-  // Fetch prices for items once they're loaded
-  useEffect(() => {
-    async function fetchPrices() {
-      if (!items) return;
-      
-      // Process items in parallel with Promise.all
-      const updatedItemsPromises = items.map(async (item, index) => {
-        if (!item.isPriceLoading) return item; // Skip if already loaded
-        
-        try {
-          // Only query CSFloat if we have the necessary data
-          if (item.def_index && (item.min_float !== null || item.max_float !== null)) {
-            const firstPrice = await getAveragePrice({
-              def_index: item.def_index,
-              paint_index: item.paint_index || undefined,
-              min_float: item.min_float || undefined,
-              max_float: item.max_float || undefined,
-              category: item.category
-            });
-            
-            return {
-              ...item,
-              price: firstPrice,
-              isPriceLoading: false,
-              priceError: false
-            };
-          }
-          
-          // If missing required data, mark as not loading but with no price
-          return {
-            ...item,
-            isPriceLoading: false
-          };
-        } catch (err) {
-          console.error(`Error fetching price for item ${item.id}:`, err);
-          return {
-            ...item,
-            isPriceLoading: false,
-            priceError: true
-          };
-        }
-      });
-      
-      const updatedItems = await Promise.all(updatedItemsPromises);
-      setItems(updatedItems);
+    if (items && !hasFetchedPrices) {
+      fetchPrices();
     }
-    
-    fetchPrices();
-  }, [items]);
+  }, [items, hasFetchedPrices]); // Only run when items or hasFetchedPrices changes
   
   if (isLoading) {
     return (
