@@ -14,6 +14,7 @@ export default function InvestmentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentInvestment, setCurrentInvestment] = useState<Investment | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [totalCurrentValue, setTotalCurrentValue] = useState<number>(0)
 
   const supabase = createClient()
 
@@ -164,6 +165,11 @@ export default function InvestmentsPage() {
     (total, inv) => total + inv.purchasePrice * inv.quantity,
     0
   )
+  
+  // Calculate ROI as percentage
+  const portfolioROI = totalInvestmentValue > 0 
+    ? (((totalCurrentValue / 100) - totalInvestmentValue) / totalInvestmentValue) * 100
+    : 0
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -185,7 +191,7 @@ export default function InvestmentsPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg bg-white p-4 shadow">
           <h2 className="text-lg font-semibold text-gray-700">Total Investments</h2>
           <p className="mt-2 text-3xl font-bold">{investments.length}</p>
@@ -202,6 +208,19 @@ export default function InvestmentsPage() {
             ${investments.length > 0 
               ? (totalInvestmentValue / investments.length).toFixed(2) 
               : '0.00'}
+          </p>
+        </div>
+        
+        <div className="rounded-lg bg-white p-4 shadow">
+          <h2 className="text-lg font-semibold text-gray-700">Portfolio ROI</h2>
+          <p className="mt-2 text-3xl font-bold">
+            {totalCurrentValue > 0 ? (
+              <span className={portfolioROI > 0 ? 'text-green-600' : portfolioROI < 0 ? 'text-red-600' : 'text-gray-600'}>
+                {portfolioROI > 0 ? '+' : ''}{portfolioROI.toFixed(2)}%
+              </span>
+            ) : (
+              <span className="text-gray-500">-</span>
+            )}
           </p>
         </div>
       </div>
@@ -223,6 +242,7 @@ export default function InvestmentsPage() {
             investments={investments}
             onEdit={openEditModal}
             onDelete={handleDeleteInvestment}
+            onCurrentValueChange={setTotalCurrentValue}
           />
         </div>
       )}

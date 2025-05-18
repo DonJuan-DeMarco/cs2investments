@@ -1,20 +1,76 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Investment } from '@/types/investment'
+import { getAveragePrice } from '@/lib/csfloat'
 
 type InvestmentListProps = {
   investments: Investment[]
   onEdit?: (investment: Investment) => void
   onDelete?: (id: string) => void
+  onCurrentValueChange?: (totalCurrentValue: number) => void
 }
 
-export function InvestmentList({ investments, onEdit, onDelete }: InvestmentListProps) {
+export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueChange }: InvestmentListProps) {
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof Investment | 'itemName'
+    key: keyof Investment | 'itemName' | 'currentPrice' | 'totalCurrentPrice'
     direction: 'asc' | 'desc'
   }>({
     key: 'purchaseDate',
     direction: 'desc',
   })
+  
+  const [currentPrices, setCurrentPrices] = useState<Record<number, { price: number | null, isLoading: boolean, error: boolean }>>({})
+  
+  // Fetch current prices for all items
+  useEffect(() => {
+    const fetchPrices = async () => {
+      // Create a batch of unique item IDs to fetch
+      const uniqueItemIds = [...new Set(investments.map(inv => inv.itemId))]
+      
+      for (const itemId of uniqueItemIds) {
+        // Skip if we already have this price and it's not loading
+        if (currentPrices[itemId] && !currentPrices[itemId].isLoading) continue
+        
+        // Mark this item as loading
+        setCurrentPrices(prev => ({
+          ...prev,
+          [itemId]: { price: null, isLoading: true, error: false }
+        }))
+        
+        try {
+          const item = investments.find(inv => inv.itemId === itemId)?.item
+          
+          if (item?.def_index && (item.min_float !== null || item.max_float !== null)) {
+            const price = await getAveragePrice({
+              def_index: item.def_index,
+              paint_index: item.paint_index || undefined,
+              min_float: item.min_float || undefined,
+              max_float: item.max_float || undefined,
+              category: item.category
+            })
+            
+            setCurrentPrices(prev => ({
+              ...prev,
+              [itemId]: { price, isLoading: false, error: false }
+            }))
+          } else {
+            // Mark as not loading if we don't have required data
+            setCurrentPrices(prev => ({
+              ...prev,
+              [itemId]: { price: null, isLoading: false, error: false }
+            }))
+          }
+        } catch (err) {
+          console.error(`Error fetching price for item ${itemId}:`, err)
+          setCurrentPrices(prev => ({
+            ...prev,
+            [itemId]: { price: null, isLoading: false, error: true }
+          }))
+        }
+      }
+    }
+    
+    fetchPrices()
+  }, [investments])
 
   const sortedInvestments = [...investments].sort((a, b) => {
     if (sortConfig.key === 'itemName') {
@@ -24,6 +80,24 @@ export function InvestmentList({ investments, onEdit, onDelete }: InvestmentList
       return sortConfig.direction === 'asc'
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue)
+    }
+    
+    if (sortConfig.key === 'currentPrice') {
+      const aPrice = currentPrices[a.itemId]?.price || 0
+      const bPrice = currentPrices[b.itemId]?.price || 0
+      
+      return sortConfig.direction === 'asc'
+        ? aPrice - bPrice
+        : bPrice - aPrice
+    }
+    
+    if (sortConfig.key === 'totalCurrentPrice') {
+      const aTotal = (currentPrices[a.itemId]?.price || 0) * a.quantity
+      const bTotal = (currentPrices[b.itemId]?.price || 0) * b.quantity
+      
+      return sortConfig.direction === 'asc'
+        ? aTotal - bTotal
+        : bTotal - aTotal
     }
     
     const aValue = a[sortConfig.key]
@@ -44,12 +118,44 @@ export function InvestmentList({ investments, onEdit, onDelete }: InvestmentList
     return 0
   })
 
-  const handleSort = (key: keyof Investment | 'itemName') => {
+  const handleSort = (key: keyof Investment | 'itemName' | 'currentPrice' | 'totalCurrentPrice') => {
     setSortConfig({
       key,
       direction:
         sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc',
     })
+  }
+  
+  // Calculate total current value
+  const totalCurrentValue = investments.reduce((total, inv) => {
+    const price = currentPrices[inv.itemId]?.price || 0
+    return total + (price * inv.quantity)
+  }, 0)
+  
+  // Notify parent component when total current value changes
+  useEffect(() => {
+    if (onCurrentValueChange) {
+      onCurrentValueChange(totalCurrentValue)
+    }
+  }, [totalCurrentValue, onCurrentValueChange])
+  
+  // Helper function to render price state
+  const renderPriceState = (itemId: number) => {
+    const priceState = currentPrices[itemId]
+    
+    if (!priceState || priceState.isLoading) {
+      return <span className="text-gray-400">Loading...</span>
+    }
+    
+    if (priceState.error) {
+      return <span className="text-red-500">Error</span>
+    }
+    
+    if (priceState.price === null) {
+      return <span className="text-gray-400">No data</span>
+    }
+    
+    return `$${(priceState.price / 100).toFixed(2)}`
   }
 
   return (
@@ -83,8 +189,19 @@ export function InvestmentList({ investments, onEdit, onDelete }: InvestmentList
               className="p-2 text-left cursor-pointer hover:bg-gray-200"
               onClick={() => handleSort('purchasePrice')}
             >
-              Price
+              Purchase Price
               {sortConfig.key === 'purchasePrice' && (
+                <span className="ml-1">
+                  {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                </span>
+              )}
+            </th>
+            <th 
+              className="p-2 text-left cursor-pointer hover:bg-gray-200"
+              onClick={() => handleSort('currentPrice')}
+            >
+              Current Price
+              {sortConfig.key === 'currentPrice' && (
                 <span className="ml-1">
                   {sortConfig.direction === 'asc' ? '↑' : '↓'}
                 </span>
@@ -102,7 +219,18 @@ export function InvestmentList({ investments, onEdit, onDelete }: InvestmentList
               )}
             </th>
             <th className="p-2 text-left">
-              Total
+              Total Purchase
+            </th>
+            <th 
+              className="p-2 text-left cursor-pointer hover:bg-gray-200"
+              onClick={() => handleSort('totalCurrentPrice')}
+            >
+              Total Current
+              {sortConfig.key === 'totalCurrentPrice' && (
+                <span className="ml-1">
+                  {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                </span>
+              )}
             </th>
             {(onEdit || onDelete) && (
               <th className="p-2 text-left">
@@ -114,7 +242,11 @@ export function InvestmentList({ investments, onEdit, onDelete }: InvestmentList
         <tbody>
           {sortedInvestments.map((investment) => {
             const itemName = investment.item.market_hash_name || investment.item.def_name
-            const totalValue = investment.purchasePrice * investment.quantity
+            const totalPurchaseValue = investment.purchasePrice * investment.quantity
+            const currentPrice = currentPrices[investment.itemId]?.price || 0
+            const totalCurrentValue = currentPrice * investment.quantity
+            const priceDifference = currentPrice - (investment.purchasePrice * 100) // Convert purchase price to cents for comparison
+            const percentChange = investment.purchasePrice > 0 ? (priceDifference / (investment.purchasePrice * 100)) * 100 : 0
             
             return (
               <tr 
@@ -138,10 +270,26 @@ export function InvestmentList({ investments, onEdit, onDelete }: InvestmentList
                   ${investment.purchasePrice.toFixed(2)}
                 </td>
                 <td className="p-2">
+                  {renderPriceState(investment.itemId)}
+                </td>
+                <td className="p-2">
                   {investment.quantity}
                 </td>
                 <td className="p-2">
-                  ${totalValue.toFixed(2)}
+                  ${totalPurchaseValue.toFixed(2)}
+                </td>
+                <td className="p-2">
+                  {currentPrices[investment.itemId]?.price !== null ? (
+                    <div className="flex flex-col">
+                      <span>${(totalCurrentValue / 100).toFixed(2)}</span>
+                      <span className={`text-xs ${percentChange > 0 ? 'text-green-600' : percentChange < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                        {percentChange > 0 ? '▲' : percentChange < 0 ? '▼' : '●'} 
+                        {percentChange.toFixed(2)}%
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">No data</span>
+                  )}
                 </td>
                 {(onEdit || onDelete) && (
                   <td className="p-2">
@@ -170,7 +318,7 @@ export function InvestmentList({ investments, onEdit, onDelete }: InvestmentList
           })}
           {sortedInvestments.length === 0 && (
             <tr className="border-b border-gray-200">
-              <td colSpan={(onEdit || onDelete) ? 6 : 5} className="p-4 text-center text-gray-500">
+              <td colSpan={(onEdit || onDelete) ? 8 : 7} className="p-4 text-center text-gray-500">
                 No investments found
               </td>
             </tr>
@@ -178,11 +326,14 @@ export function InvestmentList({ investments, onEdit, onDelete }: InvestmentList
         </tbody>
         <tfoot>
           <tr className="bg-gray-50 font-medium">
-            <td className="p-2" colSpan={4}>
+            <td className="p-2" colSpan={5}>
               Total Investment Value
             </td>
             <td className="p-2">
               ${investments.reduce((total, inv) => total + (inv.purchasePrice * inv.quantity), 0).toFixed(2)}
+            </td>
+            <td className="p-2">
+              ${(totalCurrentValue / 100).toFixed(2)}
             </td>
             {(onEdit || onDelete) && <td></td>}
           </tr>
