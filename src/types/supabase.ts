@@ -50,6 +50,32 @@ export interface Database {
           created_at?: string
         }
       }
+      investments: {
+        Row: {
+          id: string
+          item_id: number
+          purchase_date: string
+          purchase_price: number
+          quantity: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          item_id: number
+          purchase_date: string
+          purchase_price: number
+          quantity: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          item_id?: number
+          purchase_date?: string
+          purchase_price?: number
+          quantity?: number
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

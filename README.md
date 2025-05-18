@@ -9,9 +9,12 @@ A web application for tracking Counter Strike 2 items built with NextJS and Supa
 - Add new items via a modal interface
 - Display current market prices from the CSFloat API
 - Wear condition visualization with color-coded labels
+- Track your investments with purchase prices and quantities
+- Calculate total investment value and average investment cost
 
 ## Schema
 
+### CS Items
 Each item includes:
 - def_index: Item definition index (number)
 - def_name: Item definition name (string)
@@ -22,6 +25,13 @@ Each item includes:
 - category: Item category 0-3 (number)
 - market_hash_name: Steam market hash name, nullable (string)
 - image: Item image stored in Supabase storage
+
+### Investments
+Each investment tracks:
+- item_id: Reference to a CS item (number)
+- purchase_date: Date of purchase (date)
+- purchase_price: Purchase price in USD (decimal)
+- quantity: Number of items purchased (integer)
 
 ## Getting Started
 
@@ -65,6 +75,17 @@ NEXT_PUBLIC_CSFLOAT_API_KEY=your-csfloat-api-key
      category integer not null default 0,
      market_hash_name text,
      image_url text,
+     created_at timestamp with time zone default now()
+   );
+   ```
+   - Create a table called `investments` with the following schema:
+   ```sql
+   create table investments (
+     id uuid primary key default gen_random_uuid(),
+     item_id bigint not null references cs_items(id) on delete cascade,
+     purchase_date date not null,
+     purchase_price decimal(10, 2) not null,
+     quantity integer not null default 1,
      created_at timestamp with time zone default now()
    );
    ```
@@ -112,6 +133,8 @@ This project uses Supabase migrations to manage the database schema. The migrati
 
 - `00000000000001_create_cs_items_table.sql`: Creates the `cs_items` table and sets up RLS policies
 - `00000000000002_create_storage_bucket.sql`: Creates the storage bucket for CS2 item images and sets up storage policies
+- `00000000000003_update_rls_policies.sql`: Updates row-level security policies
+- `00000000000004_create_investments_table.sql`: Creates the `investments` table for tracking purchases
 
 ### Seed Data
 
