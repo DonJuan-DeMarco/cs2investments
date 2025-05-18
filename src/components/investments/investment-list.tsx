@@ -7,9 +7,20 @@ type InvestmentListProps = {
   onEdit?: (investment: Investment) => void
   onDelete?: (id: string) => void
   onCurrentValueChange?: (totalCurrentValue: number) => void
+  onInvestmentSelect?: (id: string) => void
+  selectedInvestments?: string[]
+  onCurrentPricesUpdate?: (prices: Record<number, { price: number | null, isLoading: boolean, error: boolean }>) => void
 }
 
-export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueChange }: InvestmentListProps) {
+export function InvestmentList({ 
+  investments, 
+  onEdit, 
+  onDelete, 
+  onCurrentValueChange,
+  onInvestmentSelect,
+  selectedInvestments = [],
+  onCurrentPricesUpdate
+}: InvestmentListProps) {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Investment | 'itemName' | 'currentPrice' | 'totalCurrentPrice'
     direction: 'asc' | 'desc'
@@ -139,6 +150,13 @@ export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueCh
     }
   }, [totalCurrentValue, onCurrentValueChange])
   
+  // Notify parent component when current prices change
+  useEffect(() => {
+    if (onCurrentPricesUpdate) {
+      onCurrentPricesUpdate(currentPrices)
+    }
+  }, [currentPrices, onCurrentPricesUpdate])
+  
   // Helper function to render price state
   const renderPriceState = (itemId: number) => {
     const priceState = currentPrices[itemId]
@@ -163,6 +181,9 @@ export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueCh
       <table className="w-full border-collapse">
         <thead>
           <tr className="bg-gray-100">
+            {onInvestmentSelect && (
+              <th className="p-2 w-10"></th>
+            )}
             <th 
               className="p-2 text-left cursor-pointer hover:bg-gray-200"
               onClick={() => handleSort('itemName')}
@@ -251,8 +272,24 @@ export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueCh
             return (
               <tr 
                 key={investment.id} 
-                className="border-b border-gray-200 hover:bg-gray-50"
+                className={`border-b border-gray-200 hover:bg-gray-50 ${
+                  selectedInvestments.includes(investment.id) ? 'bg-blue-50' : ''
+                }`}
+                onClick={() => onInvestmentSelect && onInvestmentSelect(investment.id)}
               >
+                {onInvestmentSelect && (
+                  <td className="p-2 w-10">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedInvestments.includes(investment.id)}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        onInvestmentSelect(investment.id)
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </td>
+                )}
                 <td className="p-2 flex items-center gap-2">
                   {investment.item.image_url && (
                     <img 
@@ -296,7 +333,10 @@ export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueCh
                     <div className="flex gap-2">
                       {onEdit && (
                         <button
-                          onClick={() => onEdit(investment)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEdit(investment)
+                          }}
                           className="text-blue-500 hover:text-blue-700"
                         >
                           Edit
@@ -304,7 +344,10 @@ export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueCh
                       )}
                       {onDelete && (
                         <button
-                          onClick={() => onDelete(investment.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDelete(investment.id)
+                          }}
                           className="text-red-500 hover:text-red-700"
                         >
                           Delete
@@ -318,7 +361,7 @@ export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueCh
           })}
           {sortedInvestments.length === 0 && (
             <tr className="border-b border-gray-200">
-              <td colSpan={(onEdit || onDelete) ? 8 : 7} className="p-4 text-center text-gray-500">
+              <td colSpan={(onEdit || onDelete) ? (onInvestmentSelect ? 9 : 8) : (onInvestmentSelect ? 8 : 7)} className="p-4 text-center text-gray-500">
                 No investments found
               </td>
             </tr>
@@ -326,7 +369,7 @@ export function InvestmentList({ investments, onEdit, onDelete, onCurrentValueCh
         </tbody>
         <tfoot>
           <tr className="bg-gray-50 font-medium">
-            <td className="p-2" colSpan={5}>
+            <td className="p-2" colSpan={onInvestmentSelect ? 6 : 5}>
               Total Investment Value
             </td>
             <td className="p-2">

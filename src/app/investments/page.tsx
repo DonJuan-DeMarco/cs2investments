@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Investment, InvestmentInput, ItemRow } from '@/types/investment'
 import { InvestmentList } from '@/components/investments/investment-list'
+import { InvestmentChart } from '@/components/investments/investment-chart'
 import { AddInvestmentModal } from '@/components/investments/add-investment-modal'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -15,6 +16,8 @@ export default function InvestmentsPage() {
   const [currentInvestment, setCurrentInvestment] = useState<Investment | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [totalCurrentValue, setTotalCurrentValue] = useState<number>(0)
+  const [selectedInvestments, setSelectedInvestments] = useState<string[]>([])
+  const [currentPrices, setCurrentPrices] = useState<Record<number, { price: number | null, isLoading: boolean, error: boolean }>>({})
 
   const supabase = createClient()
 
@@ -171,6 +174,25 @@ export default function InvestmentsPage() {
     ? (((totalCurrentValue / 100) - totalInvestmentValue) / totalInvestmentValue) * 100
     : 0
 
+  // Handle selection/deselection of investments for the chart
+  const toggleInvestmentSelection = (id: string) => {
+    setSelectedInvestments(prev => 
+      prev.includes(id) 
+        ? prev.filter(invId => invId !== id) 
+        : [...prev, id]
+    )
+  }
+  
+  // Clear all selections
+  const clearInvestmentSelection = () => {
+    setSelectedInvestments([])
+  }
+
+  // Add a handler for getting current prices from the InvestmentList component
+  const handleCurrentPricesUpdate = (prices: Record<number, { price: number | null, isLoading: boolean, error: boolean }>) => {
+    setCurrentPrices(prices)
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -237,14 +259,47 @@ export default function InvestmentsPage() {
           <span className="ml-2">Loading investments...</span>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg bg-white shadow">
-          <InvestmentList 
-            investments={investments}
-            onEdit={openEditModal}
-            onDelete={handleDeleteInvestment}
-            onCurrentValueChange={setTotalCurrentValue}
-          />
-        </div>
+        <>
+          <div className="mb-8 overflow-hidden rounded-lg bg-white shadow">
+            {selectedInvestments.length > 0 && (
+              <div className="p-4 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
+                <div>
+                  <span className="font-medium">{selectedInvestments.length} items selected</span>
+                  <span className="text-sm text-gray-600 ml-2">for chart visualization</span>
+                </div>
+                <button 
+                  onClick={clearInvestmentSelection}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            )}
+            <InvestmentList 
+              investments={investments}
+              onEdit={openEditModal}
+              onDelete={handleDeleteInvestment}
+              onCurrentValueChange={setTotalCurrentValue}
+              onInvestmentSelect={toggleInvestmentSelection}
+              selectedInvestments={selectedInvestments}
+              onCurrentPricesUpdate={handleCurrentPricesUpdate}
+            />
+          </div>
+          
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold mb-3">Portfolio Performance</h2>
+            <p className="text-gray-600 mb-4 text-sm">
+              {selectedInvestments.length > 0 
+                ? `Showing performance for ${selectedInvestments.length} selected items. Select items from the table above to customize this chart.` 
+                : 'Showing performance for all investments. Select specific items from the table above to customize this chart.'}
+            </p>
+            <InvestmentChart 
+              investments={investments} 
+              currentPrices={currentPrices}
+              selectedInvestments={selectedInvestments.length > 0 ? selectedInvestments : undefined}
+            />
+          </div>
+        </>
       )}
 
       <AddInvestmentModal
