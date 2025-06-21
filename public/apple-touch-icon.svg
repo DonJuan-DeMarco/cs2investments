@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <!-- Blue background matching CS2 logo -->
+  <rect width="180" height="180" fill="#2D4A96" rx="20"/>
+  
+  <!-- CS text with better positioning for larger size -->
+  <text x="35" y="130" font-family="Arial Black, Arial, sans-serif" font-size="70" font-weight="900" fill="white" letter-spacing="-5px">C</text>
+  <text x="110" y="130" font-family="Arial Black, Arial, sans-serif" font-size="70" font-weight="900" fill="white" letter-spacing="-5px">S</text>
+  
+  <!-- Counter-strike player silhouette between letters -->
+  <g fill="white" opacity="0.8" transform="translate(90, 40)">
+    <!-- Head -->
+    <circle cx="0" cy="0" r="8"/>
+    <!-- Body -->
+    <rect x="-6" y="10" width="12" height="25" rx="5"/>
+    <!-- Arms with weapon stance -->
+    <path d="M -6 20 Q -18 15 -25 22 L -22 25 Q -15 20 -6 22"/>
+    <path d="M 6 20 Q 18 15 25 22 L 22 25 Q 15 20 6 22"/>
+    <!-- Simple weapon -->
+    <rect x="-30" y="18" width="15" height="3" rx="1.5"/>
+    <rect x="-32" y="16" width="3" height="7" rx="1"/>
+  </g>
+</svg> 

@@ -8,6 +8,15 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "CS2 Investments - Item Tracker",
   description: "Track your CS2 items, float values, and market data",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32' }
+    ],
+    apple: { url: '/apple-touch-icon.svg', type: 'image/svg+xml', sizes: '180x180' }
+  },
+  manifest: '/manifest.json',
+  themeColor: '#2D4A96'
 };
 
 export default function RootLayout({

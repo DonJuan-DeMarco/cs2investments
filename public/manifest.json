@@ -1,0 +1,22 @@
+{
+  "name": "CS2 Investments - Item Tracker",
+  "short_name": "CS2 Investments",
+  "description": "Track your CS2 items, float values, and market data",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2D4A96",
+  "theme_color": "#2D4A96",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml"
+    }
+  ]
+} 
