@@ -311,12 +311,19 @@ export default function InvestmentsPage() {
           <p className="mt-2 text-3xl font-bold">${totalInvestmentValue.toFixed(2)}</p>
         </div>
 
-        <div className="rounded-lg bg-white p-4 shadow">
+        {/* <div className="rounded-lg bg-white p-4 shadow">
           <h2 className="text-lg font-semibold text-gray-700">Avg. Investment</h2>
           <p className="mt-2 text-3xl font-bold">
             ${investments.length > 0
               ? (totalInvestmentValue / investments.length).toFixed(2)
               : '0.00'}
+          </p>
+        </div> */}
+
+        <div className="rounded-lg bg-white p-4 shadow">
+          <h2 className="text-lg font-semibold text-gray-700">Total Current Value</h2>
+          <p className="mt-2 text-3xl font-bold">
+            ${(totalCurrentValue / 100).toFixed(2)}
           </p>
         </div>
 

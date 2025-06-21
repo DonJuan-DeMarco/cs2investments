@@ -266,7 +266,7 @@ export function InvestmentChart({
           {view === 'value' ? (
             <ComposedChart
               data={chartData}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              margin={{ top: 20, right: 30, left: 30, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
@@ -275,10 +275,10 @@ export function InvestmentChart({
                 minTickGap={50}
               />
               <YAxis
-                tickFormatter={formatPrice}
+                tickFormatter={(price: number) => `$${price.toFixed(2)}`}
               />
               <Tooltip
-                formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
+                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Price']}
                 labelFormatter={formatDate}
               />
               <Legend />
