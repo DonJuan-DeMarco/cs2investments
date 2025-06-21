@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
   Area,
   AreaChart,
   ComposedChart,
-  Bar 
+  Bar
 } from 'recharts'
 import { Investment } from '@/types/investment'
 
@@ -29,14 +29,14 @@ type InvestmentChartProps = {
   selectedInvestments?: string[] // Investment IDs to include, if empty show all
 }
 
-export function InvestmentChart({ 
-  investments, 
-  currentPrices, 
-  selectedInvestments = [] 
+export function InvestmentChart({
+  investments,
+  currentPrices,
+  selectedInvestments = []
 }: InvestmentChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([])
   const [view, setView] = useState<'value' | 'profit'>('value')
-  
+
   // Use refs to track if we need to recalculate
   const prevInvestmentsRef = useRef<string>('')
   const prevPricesRef = useRef<string>('')
@@ -45,11 +45,11 @@ export function InvestmentChart({
   useEffect(() => {
     // Create string representations of our dependencies for comparison
     const investmentsKey = JSON.stringify(investments.map(i => i.id))
-    const pricesKey = JSON.stringify(Object.entries(currentPrices).map(([id, data]) => 
+    const pricesKey = JSON.stringify(Object.entries(currentPrices).map(([id, data]) =>
       `${id}:${data.price}:${data.isLoading}:${data.error}`
     ))
     const selectedKey = JSON.stringify(selectedInvestments)
-    
+
     // Skip calculation if nothing has changed
     if (
       investmentsKey === prevInvestmentsRef.current &&
@@ -58,12 +58,12 @@ export function InvestmentChart({
     ) {
       return
     }
-    
+
     // Update refs with current values
     prevInvestmentsRef.current = investmentsKey
     prevPricesRef.current = pricesKey
     prevSelectedRef.current = selectedKey
-    
+
     // Filter investments if needed
     const filteredInvestments = selectedInvestments.length > 0
       ? investments.filter(inv => selectedInvestments.includes(inv.id))
@@ -71,25 +71,25 @@ export function InvestmentChart({
 
     // Create a date-based map for chart data
     const dateMap = new Map<string, ChartData>()
-    
+
     // Sort investments by date (ascending)
     const sortedInvestments = [...filteredInvestments].sort(
       (a, b) => new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime()
     )
-    
+
     let cumulativeInvestment = 0
-    
+
     sortedInvestments.forEach(investment => {
       const date = new Date(investment.purchaseDate).toISOString().split('T')[0]
       const purchaseValue = investment.purchasePrice * investment.quantity
-      
+
       // Increment the investment amount
       cumulativeInvestment += purchaseValue
-      
+
       // Get the current value
       const currentPrice = currentPrices[investment.itemId]?.price || 0
       const currentValue = (currentPrice / 100) * investment.quantity
-      
+
       // If this date already exists, update the values
       if (dateMap.has(date)) {
         const existing = dateMap.get(date)!
@@ -112,21 +112,21 @@ export function InvestmentChart({
         })
       }
     })
-    
+
     // Fill in the dates between purchase dates to create a smooth chart
     const allDates = Array.from(dateMap.keys()).sort()
     if (allDates.length > 1) {
       const startDate = new Date(allDates[0])
       const endDate = new Date()
-      
+
       let currentDate = new Date(startDate)
       let prevData: ChartData | null = null
-      
+
       const completeData: ChartData[] = []
-      
+
       while (currentDate <= endDate) {
         const dateStr = currentDate.toISOString().split('T')[0]
-        
+
         if (dateMap.has(dateStr)) {
           // Use the actual data for this date
           prevData = dateMap.get(dateStr)!
@@ -141,11 +141,11 @@ export function InvestmentChart({
             loss: prevData.loss
           })
         }
-        
+
         // Move to next day
         currentDate.setDate(currentDate.getDate() + 1)
       }
-      
+
       setChartData(completeData)
     } else {
       // Just use the data we have
@@ -156,18 +156,13 @@ export function InvestmentChart({
   // Format the date for display
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     })
   }
-  
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return `$${value.toFixed(2)}`
-  }
-  
+
   // If we have no data, show a placeholder
   if (chartData.length === 0) {
     return (
@@ -184,27 +179,25 @@ export function InvestmentChart({
         <div className="flex space-x-2">
           <button
             onClick={() => setView('value')}
-            className={`px-3 py-1 rounded text-sm ${
-              view === 'value' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-3 py-1 rounded text-sm ${view === 'value'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700'
-            }`}
+              }`}
           >
             Value
           </button>
           <button
             onClick={() => setView('profit')}
-            className={`px-3 py-1 rounded text-sm ${
-              view === 'profit' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-3 py-1 rounded text-sm ${view === 'profit'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700'
-            }`}
+              }`}
           >
             Profit
           </button>
         </div>
       </div>
-      
+
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           {view === 'value' ? (
@@ -213,32 +206,32 @@ export function InvestmentChart({
               margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                tickFormatter={formatDate} 
+              <XAxis
+                dataKey="date"
+                tickFormatter={formatDate}
                 minTickGap={50}
               />
-              <YAxis 
+              <YAxis
                 tickFormatter={formatCurrency}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
                 labelFormatter={formatDate}
               />
               <Legend />
-              <Area 
-                type="monotone" 
-                dataKey="investment" 
-                fill="#f3f4f6" 
-                stroke="#9ca3af" 
+              <Area
+                type="monotone"
+                dataKey="investment"
+                fill="#f3f4f6"
+                stroke="#9ca3af"
                 name="Investment"
               />
-              <Line 
-                type="monotone" 
-                dataKey="currentValue" 
-                stroke="#3b82f6" 
-                name="Current Value" 
-                dot={false} 
+              <Line
+                type="monotone"
+                dataKey="currentValue"
+                stroke="#3b82f6"
+                name="Current Value"
+                dot={false}
               />
             </ComposedChart>
           ) : (
@@ -247,30 +240,30 @@ export function InvestmentChart({
               margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 tickFormatter={formatDate}
                 minTickGap={50}
               />
-              <YAxis 
+              <YAxis
                 tickFormatter={formatCurrency}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
                 labelFormatter={formatDate}
               />
               <Legend />
-              <Bar 
-                dataKey="profit" 
+              <Bar
+                dataKey="profit"
                 fill="#10b981"
-                name="Profit" 
+                name="Profit"
                 stackId="profit"
                 isAnimationActive={false}
               />
-              <Bar 
-                dataKey="loss" 
+              <Bar
+                dataKey="loss"
                 fill="#ef4444"
-                name="Loss" 
+                name="Loss"
                 stackId="profit"
                 isAnimationActive={false}
               />

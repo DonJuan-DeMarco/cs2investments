@@ -15,7 +15,6 @@ export interface CSFloatListingParams {
 export interface CSFloatListing {
   id: string;
   price: number;
-  currency: string;
   wear_value: number;
   def_index: number;
   paint_index: number;
@@ -23,8 +22,6 @@ export interface CSFloatListing {
   // Add more fields as needed
 }
 
-// CSFloat API key - should be set as environment variable
-const CSFLOAT_API_KEY = process.env.NEXT_PUBLIC_CSFLOAT_API_KEY;
 
 /**
  * Fetches listings from CSFloat API based on item parameters
