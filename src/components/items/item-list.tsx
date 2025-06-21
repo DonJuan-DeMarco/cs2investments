@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/supabase'
-import { fetchListings, getAveragePrice } from '@/lib/csfloat'
+import { getItemPrices, PriceData } from '@/lib/price-service'
 
 type CSItem = Database['public']['Tables']['cs_items']['Row']
 
@@ -19,18 +19,18 @@ export function ItemList() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasFetchedPrices, setHasFetchedPrices] = useState(false)
-  
+
   // Create Supabase client just once with useMemo or useCallback
   const supabase = createClient()
-  
+
   // Separate fetch items function so it can be reused
   const fetchItems = useCallback(async () => {
     try {
       setIsLoading(true)
       const { data, error } = await supabase.from('cs_items').select('*')
-      
+
       if (error) throw error
-      
+
       // Initialize items with price loading state
       const itemsWithPriceState = data.map(item => ({
         ...item,
@@ -38,7 +38,7 @@ export function ItemList() {
         isPriceLoading: true,
         priceError: false
       }));
-      
+
       setItems(itemsWithPriceState)
       setHasFetchedPrices(false) // Reset price fetch flag
     } catch (err) {
@@ -48,87 +48,56 @@ export function ItemList() {
       setIsLoading(false)
     }
   }, [supabase])
-  
+
   // Initial data fetch
   useEffect(() => {
     fetchItems()
     // No dependencies since fetchItems has supabase in its dependency array
   }, [fetchItems])
-  
-  // Fetch prices for items once they're loaded, but ONLY ONCE
+
+  // Fetch prices for items from database once they're loaded
   useEffect(() => {
     async function fetchPrices() {
       if (!items || hasFetchedPrices) return;
-      
+
       setHasFetchedPrices(true); // Mark that we've started fetching prices
-      
-      // Process items in batches to prevent too many simultaneous requests
-      const batchSize = 3;
-      const updatedItems = [...items];
-      
-      for (let i = 0; i < updatedItems.length; i += batchSize) {
-        const batch = updatedItems.slice(i, i + batchSize);
-        
-        // Process the current batch in parallel
-        const batchResults = await Promise.all(
-          batch.map(async (item) => {
-            if (!item.isPriceLoading) return item; // Skip if already loaded
-            
-            try {
-              // Only query CSFloat if we have the necessary data
-              if (item.def_index && (item.min_float !== null || item.max_float !== null)) {
-                const firstPrice = await getAveragePrice({
-                  def_index: item.def_index,
-                  paint_index: item.paint_index || undefined,
-                  min_float: item.min_float || undefined,
-                  max_float: item.max_float || undefined,
-                  category: item.category
-                });
-                
-                return {
-                  ...item,
-                  price: firstPrice,
-                  isPriceLoading: false,
-                  priceError: false
-                };
-              }
-              
-              // If missing required data, mark as not loading but with no price
-              return {
-                ...item,
-                isPriceLoading: false
-              };
-            } catch (err) {
-              console.error(`Error fetching price for item ${item.id}:`, err);
-              return {
-                ...item,
-                isPriceLoading: false,
-                priceError: true
-              };
-            }
-          })
-        );
-        
-        // Update the items array with the processed batch
-        batchResults.forEach((result, index) => {
-          updatedItems[i + index] = result;
-        });
-        
-        // Update state after each batch to show progress
-        setItems([...updatedItems]);
-        
-        // Add a small delay between batches to avoid overwhelming the API
-        if (i + batchSize < updatedItems.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
+
+      try {
+        // Get all item IDs that need prices
+        const itemIds = items.map(item => item.id);
+
+        // Fetch all prices at once from database
+        const priceData = await getItemPrices(itemIds);
+
+        // Update items with fetched prices
+        const updatedItems = items.map(item => ({
+          ...item,
+          price: priceData[item.id]?.price || null,
+          isPriceLoading: false,
+          priceError: priceData[item.id] === null && items.some(i => i.id === item.id) // Set error only if we expected data
+        }));
+
+        setItems(updatedItems);
+      } catch (err) {
+        console.error('Error fetching prices:', err);
+
+        // Mark all items as having price errors
+        const updatedItems = items.map(item => ({
+          ...item,
+          price: null,
+          isPriceLoading: false,
+          priceError: true
+        }));
+
+        setItems(updatedItems);
       }
     }
-    
+
     if (items && !hasFetchedPrices) {
       fetchPrices();
     }
   }, [items, hasFetchedPrices]); // Only run when items or hasFetchedPrices changes
-  
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-10">
@@ -136,11 +105,11 @@ export function ItemList() {
       </div>
     )
   }
-  
+
   if (error) {
     return <div className="text-red-500 py-10">{error}. Please try again later.</div>
   }
-  
+
   if (!items || items.length === 0) {
     return (
       <div className="text-center py-10">
@@ -154,9 +123,9 @@ export function ItemList() {
     if (isLoading) return <span className="text-gray-400">Loading price...</span>;
     if (hasError) return <span className="text-red-400">Error fetching price</span>;
     if (price === null || price === undefined) return <span className="text-gray-400">No price data</span>;
-    
+
     // Format price with currency symbol and 2 decimal places
-    return <span className="font-medium text-green-600">${(price/100).toFixed(2)}</span>;
+    return <span className="font-medium text-green-600">${(price / 100).toFixed(2)}</span>;
   };
 
   return (
@@ -179,10 +148,10 @@ export function ItemList() {
             <tr key={item.id} className="hover:bg-gray-50">
               <td className="py-3 px-4">
                 {item.image_url ? (
-                  <img 
-                    src={item.image_url} 
+                  <img
+                    src={item.image_url}
                     alt={item.def_name}
-                    className="h-12 w-12 object-contain" 
+                    className="h-12 w-12 object-contain"
                   />
                 ) : (
                   <div className="h-12 w-12 bg-gray-200 flex items-center justify-center">
@@ -240,7 +209,7 @@ function getCategoryLabel(category: number): string {
 // Function to get wear category based on float value
 function getWearCategory(floatValue: number | null): { label: string; colorClass: string } {
   if (floatValue === null) return { label: '?', colorClass: 'text-gray-500' };
-  
+
   if (floatValue < 0.07) return { label: 'FN', colorClass: 'text-green-500 font-medium' };
   if (floatValue < 0.15) return { label: 'MW', colorClass: 'text-green-400 font-medium' };
   if (floatValue < 0.38) return { label: 'FT', colorClass: 'text-yellow-500 font-medium' };

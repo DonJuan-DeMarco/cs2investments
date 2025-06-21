@@ -14,6 +14,7 @@ import {
   Bar
 } from 'recharts'
 import { Investment } from '@/types/investment'
+import { formatPrice } from '@/lib/utils'
 
 interface ChartData {
   date: string
@@ -180,8 +181,8 @@ export function InvestmentChart({
           <button
             onClick={() => setView('value')}
             className={`px-3 py-1 rounded text-sm ${view === 'value'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700'
               }`}
           >
             Value
@@ -189,8 +190,8 @@ export function InvestmentChart({
           <button
             onClick={() => setView('profit')}
             className={`px-3 py-1 rounded text-sm ${view === 'profit'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700'
               }`}
           >
             Profit
@@ -212,7 +213,7 @@ export function InvestmentChart({
                 minTickGap={50}
               />
               <YAxis
-                tickFormatter={formatCurrency}
+                tickFormatter={formatPrice}
               />
               <Tooltip
                 formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
@@ -246,7 +247,7 @@ export function InvestmentChart({
                 minTickGap={50}
               />
               <YAxis
-                tickFormatter={formatCurrency}
+                tickFormatter={formatPrice}
               />
               <Tooltip
                 formatter={(value: number) => [`$${value.toFixed(2)}`, '']}

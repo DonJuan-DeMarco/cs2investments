@@ -6,6 +6,7 @@ import { Investment, InvestmentInput, ItemRow } from '@/types/investment'
 import { InvestmentList } from '@/components/investments/investment-list'
 import { InvestmentChart } from '@/components/investments/investment-chart'
 import { AddInvestmentModal } from '@/components/investments/add-investment-modal'
+import { getLastPriceUpdate } from '@/lib/price-service'
 import { v4 as uuidv4 } from 'uuid'
 
 export default function InvestmentsPage() {
@@ -18,6 +19,9 @@ export default function InvestmentsPage() {
   const [totalCurrentValue, setTotalCurrentValue] = useState<number>(0)
   const [selectedInvestments, setSelectedInvestments] = useState<string[]>([])
   const [currentPrices, setCurrentPrices] = useState<Record<number, { price: number | null, isLoading: boolean, error: boolean }>>({})
+  const [isUpdatingPrices, setIsUpdatingPrices] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null)
+  const [lastPriceUpdate, setLastPriceUpdate] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -29,7 +33,7 @@ export default function InvestmentsPage() {
         .order('def_name', { ascending: true })
 
       if (error) throw error
-      
+
       if (data) {
         setItems(data)
       }
@@ -42,7 +46,7 @@ export default function InvestmentsPage() {
   const fetchInvestments = async () => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const { data, error } = await supabase
         .from('investments')
@@ -53,7 +57,7 @@ export default function InvestmentsPage() {
         .order('purchase_date', { ascending: false })
 
       if (error) throw error
-      
+
       if (data) {
         const formattedInvestments: Investment[] = data.map(item => ({
           id: item.id,
@@ -64,7 +68,7 @@ export default function InvestmentsPage() {
           quantity: item.quantity,
           createdAt: item.created_at
         }))
-        
+
         setInvestments(formattedInvestments)
       }
     } catch (error: any) {
@@ -78,7 +82,17 @@ export default function InvestmentsPage() {
   useEffect(() => {
     fetchItems()
     fetchInvestments()
+    fetchLastPriceUpdate()
   }, [])
+
+  const fetchLastPriceUpdate = async () => {
+    try {
+      const lastUpdate = await getLastPriceUpdate()
+      setLastPriceUpdate(lastUpdate)
+    } catch (error) {
+      console.error('Error fetching last price update:', error)
+    }
+  }
 
   const handleAddInvestment = async (data: InvestmentInput) => {
     try {
@@ -168,21 +182,21 @@ export default function InvestmentsPage() {
     (total, inv) => total + inv.purchasePrice * inv.quantity,
     0
   )
-  
+
   // Calculate ROI as percentage
-  const portfolioROI = totalInvestmentValue > 0 
+  const portfolioROI = totalInvestmentValue > 0
     ? (((totalCurrentValue / 100) - totalInvestmentValue) / totalInvestmentValue) * 100
     : 0
 
   // Handle selection/deselection of investments for the chart
   const toggleInvestmentSelection = (id: string) => {
-    setSelectedInvestments(prev => 
-      prev.includes(id) 
-        ? prev.filter(invId => invId !== id) 
+    setSelectedInvestments(prev =>
+      prev.includes(id)
+        ? prev.filter(invId => invId !== id)
         : [...prev, id]
     )
   }
-  
+
   // Clear all selections
   const clearInvestmentSelection = () => {
     setSelectedInvestments([])
@@ -191,6 +205,49 @@ export default function InvestmentsPage() {
   // Add a handler for getting current prices from the InvestmentList component
   const handleCurrentPricesUpdate = (prices: Record<number, { price: number | null, isLoading: boolean, error: boolean }>) => {
     setCurrentPrices(prices)
+  }
+
+  // Manual price update function
+  const handleManualPriceUpdate = async () => {
+    setIsUpdatingPrices(true)
+    setUpdateMessage(null)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/manual-update-prices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || `Server returned ${response.status}`)
+      }
+
+      // Show success message
+      setUpdateMessage(
+        `Price update completed! Updated ${result.results?.success || 0} items ` +
+        `(${result.results?.failed || 0} failed, ${result.results?.skipped || 0} skipped)`
+      )
+
+      // Refresh investments to get updated prices
+      fetchInvestments()
+
+      // Refresh last update time
+      fetchLastPriceUpdate()
+
+      // Clear success message after 8 seconds
+      setTimeout(() => setUpdateMessage(null), 8000)
+
+    } catch (error: any) {
+      console.error('Error updating prices:', error)
+      setError(`Failed to update prices: ${error.message}`)
+    } finally {
+      setIsUpdatingPrices(false)
+    }
   }
 
   return (
@@ -202,14 +259,44 @@ export default function InvestmentsPage() {
             Track your CS2 item investments and portfolio performance
           </p>
         </div>
-        
-        <div className="mt-4 sm:mt-0">
-          <button
-            onClick={openAddModal}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Add Investment
-          </button>
+
+        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3 items-end">
+          {lastPriceUpdate && (
+            <div className="text-sm text-gray-500 mb-2 sm:mb-0">
+              Last updated: {new Date(lastPriceUpdate).toLocaleString()}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <button
+              onClick={handleManualPriceUpdate}
+              disabled={isUpdatingPrices}
+              title="Manually fetch latest prices for recent items (updates up to 10 items)"
+              className="flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed"
+            >
+              {isUpdatingPrices ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Update Prices
+                </>
+              )}
+            </button>
+            <button
+              onClick={openAddModal}
+              className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            >
+              Add Investment
+            </button>
+          </div>
         </div>
       </div>
 
@@ -218,21 +305,21 @@ export default function InvestmentsPage() {
           <h2 className="text-lg font-semibold text-gray-700">Total Investments</h2>
           <p className="mt-2 text-3xl font-bold">{investments.length}</p>
         </div>
-        
+
         <div className="rounded-lg bg-white p-4 shadow">
           <h2 className="text-lg font-semibold text-gray-700">Total Value</h2>
           <p className="mt-2 text-3xl font-bold">${totalInvestmentValue.toFixed(2)}</p>
         </div>
-        
+
         <div className="rounded-lg bg-white p-4 shadow">
           <h2 className="text-lg font-semibold text-gray-700">Avg. Investment</h2>
           <p className="mt-2 text-3xl font-bold">
-            ${investments.length > 0 
-              ? (totalInvestmentValue / investments.length).toFixed(2) 
+            ${investments.length > 0
+              ? (totalInvestmentValue / investments.length).toFixed(2)
               : '0.00'}
           </p>
         </div>
-        
+
         <div className="rounded-lg bg-white p-4 shadow">
           <h2 className="text-lg font-semibold text-gray-700">Portfolio ROI</h2>
           <p className="mt-2 text-3xl font-bold">
@@ -253,6 +340,12 @@ export default function InvestmentsPage() {
         </div>
       )}
 
+      {updateMessage && (
+        <div className="mb-4 rounded-md bg-green-50 p-4 text-green-700">
+          {updateMessage}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="mt-8 flex items-center justify-center">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
@@ -267,7 +360,7 @@ export default function InvestmentsPage() {
                   <span className="font-medium">{selectedInvestments.length} items selected</span>
                   <span className="text-sm text-gray-600 ml-2">for chart visualization</span>
                 </div>
-                <button 
+                <button
                   onClick={clearInvestmentSelection}
                   className="text-blue-600 hover:text-blue-800 text-sm"
                 >
@@ -275,7 +368,7 @@ export default function InvestmentsPage() {
                 </button>
               </div>
             )}
-            <InvestmentList 
+            <InvestmentList
               investments={investments}
               onEdit={openEditModal}
               onDelete={handleDeleteInvestment}
@@ -285,16 +378,16 @@ export default function InvestmentsPage() {
               onCurrentPricesUpdate={handleCurrentPricesUpdate}
             />
           </div>
-          
+
           <div className="mb-4">
             <h2 className="text-xl font-semibold mb-3">Portfolio Performance</h2>
             <p className="text-gray-600 mb-4 text-sm">
-              {selectedInvestments.length > 0 
-                ? `Showing performance for ${selectedInvestments.length} selected items. Select items from the table above to customize this chart.` 
+              {selectedInvestments.length > 0
+                ? `Showing performance for ${selectedInvestments.length} selected items. Select items from the table above to customize this chart.`
                 : 'Showing performance for all investments. Select specific items from the table above to customize this chart.'}
             </p>
-            <InvestmentChart 
-              investments={investments} 
+            <InvestmentChart
+              investments={investments}
               currentPrices={currentPrices}
               selectedInvestments={selectedInvestments.length > 0 ? selectedInvestments : undefined}
             />
@@ -307,13 +400,13 @@ export default function InvestmentsPage() {
         onClose={closeModal}
         onSubmit={currentInvestment ? handleEditInvestment : handleAddInvestment}
         items={items}
-        initialData={currentInvestment 
+        initialData={currentInvestment
           ? {
-              itemId: currentInvestment.itemId,
-              purchaseDate: currentInvestment.purchaseDate,
-              purchasePrice: currentInvestment.purchasePrice,
-              quantity: currentInvestment.quantity
-            } 
+            itemId: currentInvestment.itemId,
+            purchaseDate: currentInvestment.purchaseDate,
+            purchasePrice: currentInvestment.purchasePrice,
+            quantity: currentInvestment.quantity
+          }
           : undefined
         }
         title={currentInvestment ? 'Edit Investment' : 'Add Investment'}

@@ -76,9 +76,46 @@ export interface Database {
           created_at?: string
         }
       }
+      item_prices: {
+        Row: {
+          id: string
+          item_id: number
+          price: number
+          price_cents: number
+          recorded_at: string
+          source: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          item_id: number
+          price: number
+          price_cents: number
+          recorded_at?: string
+          source?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          item_id?: number
+          price?: number
+          price_cents?: number
+          recorded_at?: string
+          source?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
-      [_ in never]: never
+      latest_item_prices: {
+        Row: {
+          item_id: number
+          price: number
+          price_cents: number
+          recorded_at: string
+          source: string
+        }
+      }
     }
     Functions: {
       [_ in never]: never
