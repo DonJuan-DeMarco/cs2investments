@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Investment, InvestmentInput, ItemRow } from '@/types/investment'
 import { InvestmentList } from '@/components/investments/investment-list'
@@ -25,7 +25,7 @@ export default function InvestmentsPage() {
 
   const supabase = createClient()
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('cs_items')
@@ -41,9 +41,9 @@ export default function InvestmentsPage() {
       console.error('Error fetching items:', error)
       setError('Failed to load items. Please try again later.')
     }
-  }
+  }, [supabase])
 
-  const fetchInvestments = async () => {
+  const fetchInvestments = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
@@ -77,22 +77,22 @@ export default function InvestmentsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase])
 
-  useEffect(() => {
-    fetchItems()
-    fetchInvestments()
-    fetchLastPriceUpdate()
-  }, [])
-
-  const fetchLastPriceUpdate = async () => {
+  const fetchLastPriceUpdate = useCallback(async () => {
     try {
       const lastUpdate = await getLastPriceUpdate()
       setLastPriceUpdate(lastUpdate)
     } catch (error) {
       console.error('Error fetching last price update:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchItems()
+    fetchInvestments()
+    fetchLastPriceUpdate()
+  }, [fetchItems, fetchInvestments, fetchLastPriceUpdate])
 
   const handleAddInvestment = async (data: InvestmentInput) => {
     try {

@@ -111,7 +111,7 @@ export function InvestmentChart({
       const startDate = new Date(allDates[0])
       const endDate = new Date()
 
-      let currentDate = new Date(startDate)
+      const currentDate = new Date(startDate)
       let prevData: ChartData | null = null
 
       const completeData: ChartData[] = []
@@ -203,15 +203,18 @@ export function InvestmentChart({
       setChartData(recalculatedData)
     }
 
-    // Debug logging to help troubleshoot
-    console.log('Chart Debug Info:', {
-      filteredInvestments: filteredInvestments.length,
-      currentPricesAvailable: Object.keys(currentPrices).length,
-      chartDataPoints: chartData.length,
-      samplePrices: Object.entries(currentPrices).slice(0, 3),
-      lastDataPoint: chartData[chartData.length - 1]
-    })
   }, [investments, currentPrices, selectedInvestments])
+
+  // Debug logging to help troubleshoot - separate useEffect to avoid dependency issues
+  useEffect(() => {
+    if (chartData.length > 0) {
+      console.log('Chart Debug Info:', {
+        chartDataPoints: chartData.length,
+        lastDataPoint: chartData[chartData.length - 1],
+        samplePrices: Object.entries(currentPrices).slice(0, 3)
+      })
+    }
+  }, [chartData, currentPrices])
 
   // Format the date for display
   const formatDate = (dateStr: string) => {
