@@ -78,40 +78,31 @@ export function InvestmentChart({
       (a, b) => new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime()
     )
 
-    let cumulativeInvestment = 0
-
+    // Build initial data points for each purchase date
     sortedInvestments.forEach(investment => {
       const date = new Date(investment.purchaseDate).toISOString().split('T')[0]
-      const purchaseValue = investment.purchasePrice * investment.quantity
 
-      // Increment the investment amount
-      cumulativeInvestment += purchaseValue
+      // Calculate cumulative values up to and including this date
+      let cumulativeInvestment = 0
+      let cumulativeCurrentValue = 0
 
-      // Get the current value
-      const currentPrice = currentPrices[investment.itemId]?.price || 0
-      const currentValue = (currentPrice / 100) * investment.quantity
+      sortedInvestments.forEach(inv => {
+        const invDate = new Date(inv.purchaseDate).toISOString().split('T')[0]
+        if (invDate <= date) {
+          cumulativeInvestment += inv.purchasePrice * inv.quantity
+          const currentPrice = currentPrices[inv.itemId]?.price || 0
+          cumulativeCurrentValue += (currentPrice / 100) * inv.quantity
+        }
+      })
 
-      // If this date already exists, update the values
-      if (dateMap.has(date)) {
-        const existing = dateMap.get(date)!
-        const newProfit = existing.currentValue + currentValue - cumulativeInvestment
-        dateMap.set(date, {
-          ...existing,
-          investment: cumulativeInvestment,
-          currentValue: existing.currentValue + currentValue,
-          profit: Math.max(0, newProfit),
-          loss: Math.min(0, newProfit)
-        })
-      } else {
-        // Add a new entry
-        dateMap.set(date, {
-          date,
-          investment: cumulativeInvestment,
-          currentValue: currentValue,
-          profit: Math.max(0, currentValue - cumulativeInvestment),
-          loss: Math.min(0, currentValue - cumulativeInvestment)
-        })
-      }
+      // Set the data for this date (will overwrite if multiple investments on same date)
+      dateMap.set(date, {
+        date,
+        investment: cumulativeInvestment,
+        currentValue: cumulativeCurrentValue,
+        profit: Math.max(0, cumulativeCurrentValue - cumulativeInvestment),
+        loss: Math.min(0, cumulativeCurrentValue - cumulativeInvestment)
+      })
     })
 
     // Fill in the dates between purchase dates to create a smooth chart
@@ -131,16 +122,53 @@ export function InvestmentChart({
         if (dateMap.has(dateStr)) {
           // Use the actual data for this date
           prevData = dateMap.get(dateStr)!
-          completeData.push(prevData)
-        } else if (prevData) {
-          // Fill in with the previous cumulative data
-          completeData.push({
-            date: dateStr,
-            investment: prevData.investment,
-            currentValue: prevData.currentValue,
-            profit: prevData.profit,
-            loss: prevData.loss
+
+          // Recalculate current value for this date based on ALL investments up to this point
+          let totalCurrentValue = 0
+          let totalInvestment = 0
+
+          sortedInvestments.forEach(investment => {
+            const investmentDate = new Date(investment.purchaseDate).toISOString().split('T')[0]
+            if (investmentDate <= dateStr) {
+              totalInvestment += investment.purchasePrice * investment.quantity
+              const currentPrice = currentPrices[investment.itemId]?.price || 0
+              totalCurrentValue += (currentPrice / 100) * investment.quantity
+            }
           })
+
+          const updatedData = {
+            ...prevData,
+            investment: totalInvestment,
+            currentValue: totalCurrentValue,
+            profit: Math.max(0, totalCurrentValue - totalInvestment),
+            loss: Math.min(0, totalCurrentValue - totalInvestment)
+          }
+
+          prevData = updatedData
+          completeData.push(updatedData)
+        } else if (prevData) {
+          // Fill in with recalculated current value for this date
+          let totalCurrentValue = 0
+          let totalInvestment = 0
+
+          sortedInvestments.forEach(investment => {
+            const investmentDate = new Date(investment.purchaseDate).toISOString().split('T')[0]
+            if (investmentDate <= dateStr) {
+              totalInvestment += investment.purchasePrice * investment.quantity
+              const currentPrice = currentPrices[investment.itemId]?.price || 0
+              totalCurrentValue += (currentPrice / 100) * investment.quantity
+            }
+          })
+
+          const filledData = {
+            date: dateStr,
+            investment: totalInvestment,
+            currentValue: totalCurrentValue,
+            profit: Math.max(0, totalCurrentValue - totalInvestment),
+            loss: Math.min(0, totalCurrentValue - totalInvestment)
+          }
+
+          completeData.push(filledData)
         }
 
         // Move to next day
@@ -149,9 +177,40 @@ export function InvestmentChart({
 
       setChartData(completeData)
     } else {
-      // Just use the data we have
-      setChartData(Array.from(dateMap.values()))
+      // Just use the data we have, but recalculate current values
+      const recalculatedData = Array.from(dateMap.values()).map(data => {
+        let totalCurrentValue = 0
+        let totalInvestment = 0
+
+        sortedInvestments.forEach(investment => {
+          const investmentDate = new Date(investment.purchaseDate).toISOString().split('T')[0]
+          if (investmentDate <= data.date) {
+            totalInvestment += investment.purchasePrice * investment.quantity
+            const currentPrice = currentPrices[investment.itemId]?.price || 0
+            totalCurrentValue += (currentPrice / 100) * investment.quantity
+          }
+        })
+
+        return {
+          ...data,
+          investment: totalInvestment,
+          currentValue: totalCurrentValue,
+          profit: Math.max(0, totalCurrentValue - totalInvestment),
+          loss: Math.min(0, totalCurrentValue - totalInvestment)
+        }
+      })
+
+      setChartData(recalculatedData)
     }
+
+    // Debug logging to help troubleshoot
+    console.log('Chart Debug Info:', {
+      filteredInvestments: filteredInvestments.length,
+      currentPricesAvailable: Object.keys(currentPrices).length,
+      chartDataPoints: chartData.length,
+      samplePrices: Object.entries(currentPrices).slice(0, 3),
+      lastDataPoint: chartData[chartData.length - 1]
+    })
   }, [investments, currentPrices, selectedInvestments])
 
   // Format the date for display
@@ -230,7 +289,8 @@ export function InvestmentChart({
               <Line
                 type="monotone"
                 dataKey="currentValue"
-                stroke="#3b82f6"
+                stroke="#10b981"
+                strokeWidth={3}
                 name="Current Value"
                 dot={false}
               />
