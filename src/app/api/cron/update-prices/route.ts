@@ -45,7 +45,7 @@ async function fetchListingsFromCSFloat(params: CSFloatListingParams): Promise<{
   
   // Make the request to CSFloat API
   const response = await fetch(csfloatUrl.toString(), { headers });
-  
+  console.log('CSFloat API response:', response);
   if (!response.ok) {
     throw new Error(`CSFloat API returned ${response.status}: ${response.statusText}`);
   }
@@ -70,20 +70,21 @@ async function getLowestPrice(params: CSFloatListingParams): Promise<number | nu
 }
 
 export async function POST(request: NextRequest) {
+  console.log('POST request received');
   try {
     // Verify this is a valid cron request (you might want to add authentication)
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
+    console.log('Authorization header:', authHeader);
     const supabase = await createClient();
-    
+    console.log('Supabase client created');
     // Fetch all items from the database
     const { data: items, error: itemsError } = await supabase
       .from('cs_items')
       .select('*');
-    
+    console.log('Items fetched:', items);
     if (itemsError) {
       throw new Error(`Failed to fetch items: ${itemsError.message}`);
     }
@@ -189,6 +190,7 @@ export async function POST(request: NextRequest) {
 
 // Also allow GET for testing purposes (remove in production)
 export async function GET() {
+  console.log('GET request received');
   return NextResponse.json({ 
     message: 'Price update cron job endpoint',
     schedule: 'Daily at 12:00 UTC',
