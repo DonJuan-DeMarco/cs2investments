@@ -70,8 +70,10 @@ async function getLowestPrice(params: CSFloatListingParams): Promise<number | nu
 }
 
 export async function GET(request: NextRequest) {
-  console.log('POST request received');
+  console.log('GET request received');
   try {
+    console.log('CRON_SECRET:', process.env.CRON_SECRET);
+    console.log('Authorization header:', request.headers.get('authorization'));
     // Verify this is a valid cron request (you might want to add authentication)
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -188,12 +190,3 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Also allow GET for testing purposes (remove in production)
-export async function POST() {
-  console.log('GET request received');
-  return NextResponse.json({ 
-    message: 'Price update cron job endpoint',
-    schedule: 'Daily at 12:00 UTC',
-    method: 'POST with Bearer token authorization required'
-  });
-} 
