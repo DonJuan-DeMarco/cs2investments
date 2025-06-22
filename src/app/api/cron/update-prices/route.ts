@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       
       // Add delay between batches to be respectful to the API
       if (i + batchSize < items.length) {
-        await delay(1000); // 1 second delay between batches
+        await delay(10000); // 10 second delay between batches
       }
     }
     

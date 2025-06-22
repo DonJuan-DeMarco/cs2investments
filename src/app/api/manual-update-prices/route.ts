@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const { data: items, error: itemsError } = await supabase
       .from('cs_items')
       .select('*')
-      .limit(10) // Limit to 10 items for manual updates
+      // .limit(10) // Limit to 10 items for manual updates
       .order('created_at', { ascending: false });
     
     if (itemsError) {
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         }
         
         // Add small delay between requests to be respectful
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 10000));
         
       } catch (error) {
         results.failed++;
