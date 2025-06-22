@@ -69,7 +69,7 @@ async function getLowestPrice(params: CSFloatListingParams): Promise<number | nu
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   console.log('POST request received');
   try {
     // Verify this is a valid cron request (you might want to add authentication)
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Also allow GET for testing purposes (remove in production)
-export async function GET() {
+export async function POST() {
   console.log('GET request received');
   return NextResponse.json({ 
     message: 'Price update cron job endpoint',
