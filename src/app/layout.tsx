@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/navbar";
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { AuthProvider } from "@/contexts/auth-context"
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,11 +29,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 text-gray-900`}>
-        <Navbar />
-        <div className="container mx-auto px-4 py-6">
-          {children}
-        </div>
-        <SpeedInsights />
+        <AuthProvider>
+          <Navbar />
+          <div className="container mx-auto px-4 py-6">
+            {children}
+          </div>
+          <SpeedInsights />
+        </AuthProvider>
       </body>
     </html>
   );
