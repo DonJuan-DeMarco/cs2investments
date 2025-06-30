@@ -28,13 +28,10 @@ export default function InvestmentsPage() {
   const supabase = createClient()
 
   const fetchItems = useCallback(async () => {
-    if (!user) return
-
     try {
       const { data, error } = await supabase
         .from('cs_items')
         .select('*')
-        .eq('user_id', user.id)
         .order('def_name', { ascending: true })
 
       if (error) throw error
@@ -46,7 +43,7 @@ export default function InvestmentsPage() {
       console.error('Error fetching items:', error)
       setError('Failed to load items. Please try again later.')
     }
-  }, [supabase, user])
+  }, [supabase])
 
   const fetchInvestments = useCallback(async () => {
     if (!user) {

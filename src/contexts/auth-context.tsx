@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (session) {
                     // Re-authenticate the user data
                     const { data: { user } } = await supabase.auth.getUser()
-                    console.log('user from auth state change:', user)
                     setUser(user)
                 } else {
                     setUser(null)
@@ -45,12 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [supabase.auth])
 
     const signIn = async (email: string, password: string) => {
-        console.log('signIn called')
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
             email,
             password,
         })
-        console.log('data from signIn:', data)
         return { error }
     }
 
@@ -83,7 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext)
-    console.log('context:', context)
     if (context === undefined) {
         throw new Error('useAuth must be used within an AuthProvider')
     }

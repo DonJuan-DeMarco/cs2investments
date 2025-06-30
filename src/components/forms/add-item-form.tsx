@@ -161,7 +161,6 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       const { error } = await supabase.from('cs_items').insert({
         ...data,
         image_url: imageUrl,
-        user_id: user.id,
       })
 
       if (error) throw error
