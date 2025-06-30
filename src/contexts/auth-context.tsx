@@ -20,16 +20,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient()
 
     useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null)
+        // Get initial user with authentication
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setUser(user)
             setLoading(false)
         })
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (event, session) => {
-                setUser(session?.user ?? null)
+            async (event, session) => {
+                if (session) {
+                    // Re-authenticate the user data
+                    const { data: { user } } = await supabase.auth.getUser()
+                    console.log('user from auth state change:', user)
+                    setUser(user)
+                } else {
+                    setUser(null)
+                }
                 setLoading(false)
             }
         )
@@ -38,10 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [supabase.auth])
 
     const signIn = async (email: string, password: string) => {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log('signIn called')
+        const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
         })
+        console.log('data from signIn:', data)
         return { error }
     }
 
@@ -74,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext)
+    console.log('context:', context)
     if (context === undefined) {
         throw new Error('useAuth must be used within an AuthProvider')
     }

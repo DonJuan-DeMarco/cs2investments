@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/supabase'
 import { getItemPrices, PriceData } from '@/lib/price-service'
+import { useAuth } from '@/contexts/auth-context'
 
 type CSItem = Database['public']['Tables']['cs_items']['Row']
 
@@ -20,14 +21,24 @@ export function ItemList() {
   const [error, setError] = useState<string | null>(null)
   const [hasFetchedPrices, setHasFetchedPrices] = useState(false)
 
+  const { user } = useAuth()
   // Create Supabase client just once with useMemo or useCallback
   const supabase = createClient()
 
   // Separate fetch items function so it can be reused
   const fetchItems = useCallback(async () => {
+    if (!user) {
+      setItems([])
+      setIsLoading(false)
+      return
+    }
+
     try {
       setIsLoading(true)
-      const { data, error } = await supabase.from('cs_items').select('*')
+      const { data, error } = await supabase
+        .from('cs_items')
+        .select('*')
+        .eq('user_id', user.id)
 
       if (error) throw error
 
@@ -47,7 +58,7 @@ export function ItemList() {
     } finally {
       setIsLoading(false)
     }
-  }, [supabase])
+  }, [supabase, user])
 
   // Initial data fetch
   useEffect(() => {

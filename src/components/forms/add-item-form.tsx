@@ -3,6 +3,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/auth-context'
 
 const itemSchema = z.object({
   def_index: z.coerce.number().int().min(0),
@@ -29,7 +30,7 @@ type ItemFormValues = z.infer<typeof itemSchema>
 // Function to get wear category name based on float value
 function getWearName(floatValue: number | null): string {
   if (floatValue === null) return '';
-  
+
   if (floatValue < 0.07) return 'Factory New';
   if (floatValue < 0.15) return 'Minimal Wear';
   if (floatValue < 0.38) return 'Field-Tested';
@@ -42,9 +43,10 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [selectedWear, setSelectedWear] = useState<number | null>(null)
-  
+
+  const { user } = useAuth()
   const supabase = createClient()
-  
+
   const {
     register,
     handleSubmit,
@@ -71,18 +73,18 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
   const defName = useWatch({ control, name: 'def_name' });
   const paintName = useWatch({ control, name: 'paint_name' });
   const minFloat = useWatch({ control, name: 'min_float' });
-  
+
   // Generate market hash name whenever dependent fields change
   useEffect(() => {
     if (!defName) return;
-    
+
     let hashName = defName;
-    
+
     // Add paint name if available
     if (paintName) {
       hashName += ` | ${paintName}`;
     }
-    
+
     // Add wear condition if min_float is specified
     if (minFloat !== null && minFloat !== undefined) {
       const wearName = getWearName(minFloat);
@@ -90,16 +92,16 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
         hashName += ` (${wearName})`;
       }
     }
-    
+
     setValue('market_hash_name', hashName);
   }, [defName, paintName, minFloat, setValue]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
+
     setImageFile(file)
-    
+
     // Create preview URL
     const reader = new FileReader()
     reader.onloadend = () => {
@@ -111,9 +113,14 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
   const onSubmit = async (data: ItemFormValues) => {
     try {
       setIsLoading(true)
-      
+
+      if (!user) {
+        alert('You must be logged in to add items.')
+        return
+      }
+
       let imageUrl = null
-      
+
       // Upload image to Supabase Storage if exists
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop()
@@ -121,50 +128,51 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('cs-items-images')
           .upload(fileName, imageFile)
-          
+
         if (uploadError) throw uploadError
-        
+
         // Get public URL
         const { data: { publicUrl } } = supabase.storage
           .from('cs-items-images')
           .getPublicUrl(fileName)
-          
+
         imageUrl = publicUrl
       }
-      
+
       // Generate market hash name if not already set
       if (!data.market_hash_name && data.def_name) {
         let hashName = data.def_name;
-        
+
         if (data.paint_name) {
           hashName += ` | ${data.paint_name}`;
         }
-        
+
         if (data.min_float !== null) {
           const wearName = getWearName(data.min_float);
           if (wearName) {
             hashName += ` (${wearName})`;
           }
         }
-        
+
         data.market_hash_name = hashName;
       }
-      
+
       // Insert the item data
       const { error } = await supabase.from('cs_items').insert({
         ...data,
         image_url: imageUrl,
+        user_id: user.id,
       })
-      
+
       if (error) throw error
-      
+
       // Reset form and state on success
       reset()
       setImageFile(null)
       setImagePreview(null)
       setSelectedWear(null)
       onSuccess()
-      
+
     } catch (error) {
       console.error('Error adding item:', error)
       alert('Failed to add item. Please try again.')
@@ -172,7 +180,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
       setIsLoading(false)
     }
   }
-  
+
   // Reset function to clear form and state
   const handleReset = () => {
     reset();
@@ -195,7 +203,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
             <p className="text-red-500 text-xs mt-1">{errors.def_index.message}</p>
           )}
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium mb-1">Definition Name*</label>
           <input
@@ -208,7 +216,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
           )}
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Paint Index</label>
@@ -221,7 +229,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
             <p className="text-red-500 text-xs mt-1">{errors.paint_index.message}</p>
           )}
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium mb-1">Paint Name</label>
           <input
@@ -231,32 +239,31 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
           />
         </div>
       </div>
-      
+
       <div className="mb-3">
         <label className="block text-sm font-medium mb-2">Wear Condition</label>
         <div className="grid grid-cols-5 gap-2">
           {wearCategories.map((category, index) => (
-            <button 
-              key={category.label} 
+            <button
+              key={category.label}
               type="button"
               onClick={() => handleWearSelect(index)}
-              className={`py-2 px-1 text-center border rounded transition-colors ${
-                selectedWear === index 
-                  ? `${category.colorClass} border-2` 
-                  : 'bg-white border-gray-200 hover:bg-gray-50'
-              }`}
+              className={`py-2 px-1 text-center border rounded transition-colors ${selectedWear === index
+                ? `${category.colorClass} border-2`
+                : 'bg-white border-gray-200 hover:bg-gray-50'
+                }`}
             >
               <div className="font-medium">{category.label}</div>
               <div className="text-xs">{category.minFloat.toFixed(2)}-{category.maxFloat.toFixed(2)}</div>
             </button>
           ))}
         </div>
-        
+
         {/* Hidden inputs for form values */}
         <input type="hidden" {...register('min_float')} />
         <input type="hidden" {...register('max_float')} />
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-1">Category</label>
         <select
@@ -269,7 +276,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
           <option value="3">3 - Other</option>
         </select>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-1">Market Hash Name (Auto-generated)</label>
         <input
@@ -279,7 +286,7 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
           readOnly
         />
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-1">Image</label>
         <input
@@ -288,14 +295,14 @@ export function AddItemForm({ onSuccess }: { onSuccess: () => void }) {
           onChange={handleImageChange}
           className="w-full p-2 border rounded"
         />
-        
+
         {imagePreview && (
           <div className="mt-2">
             <img src={imagePreview} alt="Preview" className="h-24 object-contain" />
           </div>
         )}
       </div>
-      
+
       <div className="flex justify-end space-x-3 pt-4">
         <button
           type="button"

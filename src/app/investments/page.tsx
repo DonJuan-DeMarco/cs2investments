@@ -7,6 +7,7 @@ import { InvestmentList } from '@/components/investments/investment-list'
 import { InvestmentChart } from '@/components/investments/investment-chart'
 import { AddInvestmentModal } from '@/components/investments/add-investment-modal'
 import { getLastPriceUpdate } from '@/lib/price-service'
+import { useAuth } from '@/contexts/auth-context'
 import { v4 as uuidv4 } from 'uuid'
 
 export default function InvestmentsPage() {
@@ -23,13 +24,17 @@ export default function InvestmentsPage() {
   const [updateMessage, setUpdateMessage] = useState<string | null>(null)
   const [lastPriceUpdate, setLastPriceUpdate] = useState<string | null>(null)
 
+  const { user } = useAuth()
   const supabase = createClient()
 
   const fetchItems = useCallback(async () => {
+    if (!user) return
+
     try {
       const { data, error } = await supabase
         .from('cs_items')
         .select('*')
+        .eq('user_id', user.id)
         .order('def_name', { ascending: true })
 
       if (error) throw error
@@ -41,9 +46,14 @@ export default function InvestmentsPage() {
       console.error('Error fetching items:', error)
       setError('Failed to load items. Please try again later.')
     }
-  }, [supabase])
+  }, [supabase, user])
 
   const fetchInvestments = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
@@ -54,6 +64,7 @@ export default function InvestmentsPage() {
           *,
           item:cs_items(*)
         `)
+        .eq('user_id', user.id)
         .order('purchase_date', { ascending: false })
 
       if (error) throw error
@@ -77,7 +88,7 @@ export default function InvestmentsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [supabase])
+  }, [supabase, user])
 
   const fetchLastPriceUpdate = useCallback(async () => {
     try {
@@ -95,6 +106,11 @@ export default function InvestmentsPage() {
   }, [fetchItems, fetchInvestments, fetchLastPriceUpdate])
 
   const handleAddInvestment = async (data: InvestmentInput) => {
+    if (!user) {
+      setError('You must be logged in to add investments.')
+      return
+    }
+
     try {
       const newInvestment = {
         id: uuidv4(),
@@ -102,6 +118,7 @@ export default function InvestmentsPage() {
         purchase_date: data.purchaseDate,
         purchase_price: data.purchasePrice,
         quantity: data.quantity,
+        user_id: user.id,
         created_at: new Date().toISOString()
       }
 

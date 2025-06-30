@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { AddItemForm } from '@/components/forms/add-item-form'
 import { ItemList } from '@/components/items/item-list'
+import { useAuth } from '@/contexts/auth-context'
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const { user } = useAuth()
 
   const handleAddSuccess = () => {
     setIsModalOpen(false)
@@ -23,7 +25,7 @@ export default function Home() {
             Manage your CS2 items inventory and data
           </p>
         </div>
-        
+
         <div className="mt-4 sm:mt-0">
           <button
             onClick={() => setIsModalOpen(true)}
@@ -40,8 +42,8 @@ export default function Home() {
       </div>
 
       {/* Add Item Modal */}
-      <Modal 
-        isOpen={isModalOpen} 
+      <Modal
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Add New CS2 Item"
       >
