@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import axios from 'axios';
 
 interface CSFloatListing {
   id: string;
@@ -31,20 +32,48 @@ async function fetchListingsFromCSFloat(params: CSFloatListingParams): Promise<{
     }
   });
   
-  const headers: HeadersInit = {};
+  const headers: Record<string, string> = {};
   const apiKey = process.env.NEXT_PUBLIC_CSFLOAT_API_KEY;
   
   if (apiKey) {
     headers['Authorization'] = apiKey;
   }
+
+  // Set up proxy configuration
+  let axiosConfig: any = {
+    headers,
+    timeout: 30000 // 30 second timeout
+  };
+
+  // Add proxy configuration if FIXIE_URL is available
+  if (process.env.FIXIE_URL) {
+    const fixieUrl = new URL(process.env.FIXIE_URL);
+    if (fixieUrl.username && fixieUrl.password && fixieUrl.hostname && fixieUrl.port) {
+      const fixieAuth = [fixieUrl.username, fixieUrl.password];
+      axiosConfig.proxy = {
+        protocol: 'http',
+        host: fixieUrl.hostname,
+        port: parseInt(fixieUrl.port),
+        auth: {
+          username: fixieAuth[0],
+          password: fixieAuth[1]
+        }
+      };
+      console.log('Using proxy configuration:', {
+        host: fixieUrl.hostname,
+        port: fixieUrl.port,
+        username: fixieAuth[0]
+      });
+    }
+  }
   
-  const response = await fetch(csfloatUrl.toString(), { headers });
+  const response = await axios.get(csfloatUrl.toString(), axiosConfig);
   
-  if (!response.ok) {
+  if (response.status !== 200) {
     throw new Error(`CSFloat API returned ${response.status}: ${response.statusText}`);
   }
   
-  return await response.json();
+  return response.data;
 }
 
 async function getLowestPrice(params: CSFloatListingParams): Promise<number | null> {
