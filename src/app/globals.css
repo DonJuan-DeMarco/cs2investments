@@ -3,24 +3,74 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --candy-red-light: #fc3c44;
+  --candy-red: #f94c57;
+  --candy-red-dark: #c33c50;
+  --card: #F8F9FA;
+  --border: #E5E7EB;
+  --input: #F3F4F6;
+  --modal-text: #1F2937;
+  --modal-text-muted: #4B5563;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-candy-red: var(--candy-red);
+  --color-candy-red-light: var(--candy-red-light);
+  --color-candy-red-dark: var(--candy-red-dark);
+  --color-modal-text: var(--modal-text);
+  --color-modal-text-muted: var(--modal-text-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* Disabling dark mode for now to ensure light background 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --candy-red-light: #fc3c44;
+    --candy-red: #f94c57;
+    --candy-red-dark: #c33c50;
+    --card: #1a1a1a;
+    --border: #2a2a2a;
+    --input: #2a2a2a;
+    --modal-text: #F9FAFB;
+    --modal-text-muted: #D1D5DB;
   }
 }
+*/
 
-body {
+html, body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+}
+
+/* Utility classes for candy red colors */
+.text-candy-red {
+  color: var(--candy-red);
+}
+
+.text-candy-red-light {
+  color: var(--candy-red-light);
+}
+
+.text-candy-red-dark {
+  color: var(--candy-red-dark);
+}
+
+.bg-candy-red {
+  background-color: var(--candy-red);
+}
+
+/* Fix text colors in modals */
+.modal-text {
+  color: var(--modal-text);
+}
+
+.modal-text-muted {
+  color: var(--modal-text-muted);
 }
