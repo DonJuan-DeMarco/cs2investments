@@ -46,7 +46,7 @@ async function fetchListingsFromCSFloat(params: CSFloatListingParams): Promise<{
   }
 
   // Set up proxy configuration
-  let axiosConfig: any = {
+  const axiosConfig: any = {
     headers,
     timeout: 30000 // 30 second timeout
   };

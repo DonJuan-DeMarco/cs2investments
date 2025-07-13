@@ -52,41 +52,6 @@ export function InvestmentChart({
   const prevPricesRef = useRef<string>('')
   const prevSelectedRef = useRef<string>('')
 
-  useEffect(() => {
-    // Create string representations of our dependencies for comparison
-    const investmentsKey = JSON.stringify(investments.map(i => i.id))
-    const pricesKey = JSON.stringify(Object.entries(currentPrices).map(([id, data]) =>
-      `${id}:${data.price}:${data.isLoading}:${data.error}`
-    ))
-    const selectedKey = JSON.stringify(selectedInvestments)
-
-    // Skip calculation if nothing has changed
-    if (
-      investmentsKey === prevInvestmentsRef.current &&
-      pricesKey === prevPricesRef.current &&
-      selectedKey === prevSelectedRef.current
-    ) {
-      return
-    }
-
-    // Update refs with current values
-    prevInvestmentsRef.current = investmentsKey
-    prevPricesRef.current = pricesKey
-    prevSelectedRef.current = selectedKey
-
-    // Filter investments if needed
-    const filteredInvestments = selectedInvestments.length > 0
-      ? investments.filter(inv => selectedInvestments.includes(inv.id))
-      : investments
-
-    if (filteredInvestments.length === 0) {
-      setChartData([])
-      return
-    }
-
-    calculateChartDataWithHistoricalPrices(filteredInvestments)
-
-  }, [investments, currentPrices, selectedInvestments])
 
   const calculateChartDataWithHistoricalPrices = async (filteredInvestments: Investment[]) => {
     setIsLoadingHistoricalData(true)
@@ -210,6 +175,43 @@ export function InvestmentChart({
       setIsLoadingHistoricalData(false)
     }
   }
+
+  useEffect(() => {
+    // Create string representations of our dependencies for comparison
+    const investmentsKey = JSON.stringify(investments.map(i => i.id))
+    const pricesKey = JSON.stringify(Object.entries(currentPrices).map(([id, data]) =>
+      `${id}:${data.price}:${data.isLoading}:${data.error}`
+    ))
+    const selectedKey = JSON.stringify(selectedInvestments)
+
+    // Skip calculation if nothing has changed
+    if (
+      investmentsKey === prevInvestmentsRef.current &&
+      pricesKey === prevPricesRef.current &&
+      selectedKey === prevSelectedRef.current
+    ) {
+      return
+    }
+
+    // Update refs with current values
+    prevInvestmentsRef.current = investmentsKey
+    prevPricesRef.current = pricesKey
+    prevSelectedRef.current = selectedKey
+
+    // Filter investments if needed
+    const filteredInvestments = selectedInvestments.length > 0
+      ? investments.filter(inv => selectedInvestments.includes(inv.id))
+      : investments
+
+    if (filteredInvestments.length === 0) {
+      setChartData([])
+      return
+    }
+
+    calculateChartDataWithHistoricalPrices(filteredInvestments)
+
+  }, [investments, currentPrices, selectedInvestments, calculateChartDataWithHistoricalPrices])
+
 
   // Fallback method using current prices (the original logic)
   const calculateChartDataWithCurrentPrices = (filteredInvestments: Investment[]) => {
