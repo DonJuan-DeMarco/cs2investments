@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     ],
     apple: { url: '/apple-touch-icon.svg', type: 'image/svg+xml', sizes: '180x180' }
   },
-  manifest: '/manifest.json',
+  // manifest: '/manifest.json',
   themeColor: '#2D4A96'
 };
 
