@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import url from 'url';
+import axios from 'axios';
 
 interface CSFloatListing {
   id: string;
@@ -31,20 +33,64 @@ async function fetchListingsFromCSFloat(params: CSFloatListingParams): Promise<{
     }
   });
   
-  const headers: HeadersInit = {};
+  const headers: Record<string, string> = {};
   const apiKey = process.env.NEXT_PUBLIC_CSFLOAT_API_KEY;
   
   if (apiKey) {
     headers['Authorization'] = apiKey;
   }
+
+  // Set up proxy configuration
+  let axiosConfig: any = {
+    headers,
+    timeout: 30000 // 30 second timeout
+  };
+
+  // Add proxy configuration if FIXIE_URL is available
+  console.log('FIXIE_URL:', process.env.FIXIE_URL);
+
   
-  const response = await fetch(csfloatUrl.toString(), { headers });
+  if (process.env.FIXIE_URL) {
+    
+  const fixieUrl = url.parse(process.env.FIXIE_URL || '');
+    // const fixieUrl = new URL(process.env.FIXIE_URL);
+    console.log('fixieUrl:', fixieUrl);
+    if (fixieUrl.auth && fixieUrl.hostname && fixieUrl.port) {
+      // const fixieAuth = [fixieUrl.username, fixieUrl.password];
+      const fixieAuth = fixieUrl.auth.split(':');
+      // console.log('fixieAuth:', fixieAuth, fixieUrl.username, fixieUrl.password, fixieUrl.hostname, fixieUrl.port);
+      axiosConfig.proxy = {
+        protocol: 'http',
+        headers: headers,
+        host: fixieUrl.hostname,
+        port: parseInt(fixieUrl.port),
+        auth: {
+          username: fixieAuth[0],
+          password: fixieAuth[1]
+        }
+      };
+      console.log('Using proxy configuration:', {
+        host: fixieUrl.hostname,
+        port: fixieUrl.port,
+        username: fixieAuth[0]
+      });
+    }
+  }
+  console.log('axiosConfig:', axiosConfig);
+  console.log('csfloatUrl:', csfloatUrl.toString());
+  const response = await axios.get(csfloatUrl.toString(), axiosConfig).then(res => {
+    console.log('responser:', res);
+    return res;
+  }).catch(err => {
+    console.log('errorr:', err);
+    return err;
+  });
   
-  if (!response.ok) {
+  if (response.status !== 200) {
     throw new Error(`CSFloat API returned ${response.status}: ${response.statusText}`);
   }
   
-  return await response.json();
+  return response.data;
 }
 
 async function getLowestPrice(params: CSFloatListingParams): Promise<number | null> {
@@ -71,7 +117,7 @@ export async function POST(request: NextRequest) {
     const { data: items, error: itemsError } = await supabase
       .from('cs_items')
       .select('*')
-      // .limit(10) // Limit to 10 items for manual updates
+       .limit(1) // Limit to 10 items for manual updates
       .order('created_at', { ascending: false });
     
     if (itemsError) {

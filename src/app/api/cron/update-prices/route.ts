@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/types/supabase';
 import axios from 'axios';
+import url from 'url';
 
 interface CSFloatListing {
   id: string;
@@ -51,10 +52,14 @@ async function fetchListingsFromCSFloat(params: CSFloatListingParams): Promise<{
   };
 
   // Add proxy configuration if FIXIE_URL is available
+  console.log('FIXIE_URL:', process.env.FIXIE_URL);
   if (process.env.FIXIE_URL) {
-    const fixieUrl = new URL(process.env.FIXIE_URL);
-    if (fixieUrl.username && fixieUrl.password && fixieUrl.hostname && fixieUrl.port) {
-      const fixieAuth = [fixieUrl.username, fixieUrl.password];
+    // const fixieUrl = new URL(process.env.FIXIE_URL);
+    
+  const fixieUrl = url.parse(process.env.FIXIE_URL || '');
+    if (fixieUrl.auth && fixieUrl.hostname && fixieUrl.port) {
+      // const fixieAuth = [fixieUrl.username, fixieUrl.password];
+      const fixieAuth = fixieUrl.auth.split(':');
       axiosConfig.proxy = {
         protocol: 'http',
         host: fixieUrl.hostname,
